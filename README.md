@@ -19,3 +19,30 @@ credentials. Writes are atomic, malformed data is rejected, and existing files
 are never silently discarded.
 
 ApplyFlow is being built as part of an eight-week automation project challenge.
+
+
+## Quick start
+
+```bash
+python -m pip install -e .
+
+applyflow --data ~/private/applications.json add \
+  --company "Example Company" \
+  --role "Data Analyst" \
+  --status applied \
+  --follow-up-on 2026-09-08
+
+applyflow --data ~/private/applications.json list
+applyflow --data ~/private/applications.json due --as-of 2026-09-08
+```
+
+ApplyFlow supports saved, applied, interviewing, offer, rejected, and withdrawn
+stages. Invalid stage jumps are rejected, terminal outcomes clear follow-ups,
+and every accepted change is recorded in the local activity history.
+
+The `due` command returns status 1 when follow-ups need attention, which makes
+it useful in a personal script or scheduled local check. JSON reports are
+available with `--json` and omit source URLs and activity notes.
+
+See the [usage guide](docs/usage.md) and
+[privacy and safety guide](docs/privacy-and-safety.md) for details.
