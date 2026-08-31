@@ -1,0 +1,19 @@
+# Local application data
+applyflow.json
+*.applyflow.json
+applications.json
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
