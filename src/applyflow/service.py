@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date, datetime, timezone
 from uuid import uuid4
 
@@ -104,3 +105,68 @@ def get_application(store: ApplicationStore, application_id: str) -> Application
     if application is None:
         raise ApplicationError(f"Application not found: {clean_id}")
     return application
+
+
+
+_ALLOWED_TRANSITIONS: dict[ApplicationStatus, frozenset[ApplicationStatus]] = {
+    ApplicationStatus.SAVED: frozenset(
+        {ApplicationStatus.APPLIED, ApplicationStatus.WITHDRAWN}
+    ),
+    ApplicationStatus.APPLIED: frozenset(
+        {
+            ApplicationStatus.INTERVIEWING,
+            ApplicationStatus.REJECTED,
+            ApplicationStatus.WITHDRAWN,
+        }
+    ),
+    ApplicationStatus.INTERVIEWING: frozenset(
+        {
+            ApplicationStatus.OFFER,
+            ApplicationStatus.REJECTED,
+            ApplicationStatus.WITHDRAWN,
+        }
+    ),
+    ApplicationStatus.OFFER: frozenset({ApplicationStatus.WITHDRAWN}),
+    ApplicationStatus.REJECTED: frozenset(),
+    ApplicationStatus.WITHDRAWN: frozenset(),
+}
+
+
+def transition_application(
+    store: ApplicationStore,
+    application_id: str,
+    status: ApplicationStatus,
+    *,
+    note: str | None = None,
+    now: datetime | None = None,
+) -> Application:
+    """Move an application through a valid stage and preserve its history."""
+
+    applications = store.load()
+    current = next((item for item in applications if item.id == application_id), None)
+    if current is None:
+        raise ApplicationError(f"Application not found: {application_id}")
+    if status not in _ALLOWED_TRANSITIONS[current.status]:
+        raise ApplicationError(
+            f"Cannot move application from {current.status.value} to {status.value}"
+        )
+
+    timestamp = now or datetime.now(timezone.utc)
+    clean_note = note.strip() if note and note.strip() else None
+    terminal = status in {ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN}
+    updated = replace(
+        current,
+        status=status,
+        applied_on=(
+            current.applied_on
+            or (timestamp.date() if status == ApplicationStatus.APPLIED else None)
+        ),
+        follow_up_on=None if terminal else current.follow_up_on,
+        updated_at=timestamp,
+        history=(
+            *current.history,
+            Activity(at=timestamp, status=status, note=clean_note),
+        ),
+    )
+    store.save(tuple(updated if item.id == updated.id else item for item in applications))
+    return updated
