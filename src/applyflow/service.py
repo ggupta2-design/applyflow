@@ -170,3 +170,68 @@ def transition_application(
     )
     store.save(tuple(updated if item.id == updated.id else item for item in applications))
     return updated
+
+
+
+def schedule_follow_up(
+    store: ApplicationStore,
+    application_id: str,
+    follow_up_on: date | None,
+    *,
+    now: datetime | None = None,
+) -> Application:
+    """Set or clear a follow-up date without contacting anyone."""
+
+    applications = store.load()
+    current = next((item for item in applications if item.id == application_id), None)
+    if current is None:
+        raise ApplicationError(f"Application not found: {application_id}")
+    if current.status in {ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN}:
+        raise ApplicationError(
+            f"Cannot schedule a follow-up for a {current.status.value} application"
+        )
+
+    timestamp = now or datetime.now(timezone.utc)
+    action = (
+        f"Follow-up scheduled for {follow_up_on.isoformat()}"
+        if follow_up_on
+        else "Follow-up cleared"
+    )
+    updated = replace(
+        current,
+        follow_up_on=follow_up_on,
+        updated_at=timestamp,
+        history=(
+            *current.history,
+            Activity(at=timestamp, status=current.status, note=action),
+        ),
+    )
+    store.save(tuple(updated if item.id == updated.id else item for item in applications))
+    return updated
+
+
+def due_follow_ups(
+    store: ApplicationStore,
+    *,
+    as_of: date | None = None,
+) -> tuple[Application, ...]:
+    """Return active follow-ups due on or before a selected date."""
+
+    target = as_of or date.today()
+    terminal = {ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN}
+    return tuple(
+        sorted(
+            (
+                item
+                for item in store.load()
+                if item.follow_up_on is not None
+                and item.follow_up_on <= target
+                and item.status not in terminal
+            ),
+            key=lambda item: (
+                item.follow_up_on or target,
+                item.company.casefold(),
+                item.role.casefold(),
+            ),
+        )
+    )
