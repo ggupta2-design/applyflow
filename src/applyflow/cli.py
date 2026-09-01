@@ -38,7 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="applyflow",
         description="Track job applications and follow-ups locally",
     )
-    parser.add_argument("--version", action="version", version="applyflow 0.1.0")
+    parser.add_argument("--version", action="version", version="applyflow 0.2.0")
     parser.add_argument(
         "--data",
         type=Path,
