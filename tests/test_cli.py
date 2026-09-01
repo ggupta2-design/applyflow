@@ -1,6 +1,9 @@
 import json
+from datetime import datetime, timezone
 
 from applyflow.cli import run
+from applyflow.service import create_application
+from applyflow.storage import ApplicationStore
 
 
 def test_add_list_move_and_schedule_workflow(tmp_path, capsys):
@@ -156,3 +159,45 @@ def test_pipeline_command_reports_stage_metrics(tmp_path, capsys):
     assert payload["submitted"] == 1
     assert payload["status_counts"]["applied"] == 1
     assert payload["status_counts"]["saved"] == 1
+
+
+
+def test_stale_command_uses_review_exit_statuses(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+    create_application(
+        ApplicationStore(data),
+        company="Example",
+        role="Analyst",
+        application_id="old",
+        now=datetime(2026, 8, 1, tzinfo=timezone.utc),
+    )
+
+    assert run(
+        [
+            "--data",
+            str(data),
+            "stale",
+            "--as-of",
+            "2026-09-01",
+            "--inactive-days",
+            "14",
+            "--json",
+        ]
+    ) == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["count"] == 1
+    assert payload["applications"][0]["inactive_days"] == 31
+
+    assert run(
+        [
+            "--data",
+            str(data),
+            "stale",
+            "--as-of",
+            "2026-08-10",
+            "--inactive-days",
+            "14",
+            "--json",
+        ]
+    ) == 0
+    assert json.loads(capsys.readouterr().out)["count"] == 0
