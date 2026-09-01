@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 — 2026-09-01
+
+- Added read-only application stage and pipeline totals.
+- Added history-aware interview and offer conversion rates.
+- Added stale active-application detection with configurable thresholds.
+- Added deterministic oldest-first stale review ordering.
+- Added privacy-aware readable and JSON analytics reports.
+- Added pipeline and stale-review CLI commands with automation-friendly statuses.
+- Added analytics tests, workflow documentation, and metric privacy guidance.
+
 ## 0.1.0 — 2026-08-31
 
 - Added validated local job application records.
