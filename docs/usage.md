@@ -55,3 +55,28 @@ reports reminders; it does not send messages or access a calendar.
 
 See [privacy-and-safety.md](privacy-and-safety.md) before storing real
 application information.
+
+
+
+## Review pipeline progress
+
+Summarize current stages and milestone conversion without changing records:
+
+```bash
+applyflow --data ~/private/applications.json pipeline
+applyflow --data ~/private/applications.json pipeline --json
+```
+
+Find active records that have not changed recently:
+
+```bash
+applyflow --data ~/private/applications.json stale \
+  --as-of 2026-09-01 \
+  --inactive-days 14 \
+  --json
+```
+
+The stale command returns status 1 when records need manual review and 0 when
+none meet the threshold. Rejected and withdrawn applications are excluded.
+Neither command exposes source URLs or activity notes. See
+[analytics.md](analytics.md) for metric definitions and privacy boundaries.
