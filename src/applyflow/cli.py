@@ -8,8 +8,13 @@ from datetime import date
 from pathlib import Path
 from typing import Sequence
 
+from .analytics import summarize_pipeline
 from .models import ApplicationError, ApplicationStatus
-from .report import format_applications, format_due_follow_ups
+from .report import (
+    format_applications,
+    format_due_follow_ups,
+    format_pipeline,
+)
 from .service import (
     create_application,
     due_follow_ups,
@@ -72,6 +77,12 @@ def build_parser() -> argparse.ArgumentParser:
     target.add_argument("--clear", action="store_true")
     schedule.add_argument("--json", action="store_true", dest="as_json")
 
+    pipeline = commands.add_parser(
+        "pipeline",
+        help="summarize stages and conversion without changing records",
+    )
+    pipeline.add_argument("--json", action="store_true", dest="as_json")
+
     due = commands.add_parser("due", help="list follow-ups due by a date")
     due.add_argument("--as-of", type=_date, default=date.today())
     due.add_argument("--json", action="store_true", dest="as_json")
@@ -119,6 +130,11 @@ def run(argv: Sequence[str] | None = None) -> int:
                 None if args.clear else args.on,
             )
             print(format_applications((application,), as_json=args.as_json, heading="Updated"))
+            return 0
+
+        if args.command == "pipeline":
+            summary = summarize_pipeline(store.load())
+            print(format_pipeline(summary, as_json=args.as_json))
             return 0
 
         applications = due_follow_ups(store, as_of=args.as_of)
