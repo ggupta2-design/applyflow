@@ -201,3 +201,20 @@ def test_stale_command_uses_review_exit_statuses(tmp_path, capsys):
         ]
     ) == 0
     assert json.loads(capsys.readouterr().out)["count"] == 0
+
+
+
+def test_stale_command_rejects_invalid_thresholds(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+    assert run(
+        [
+            "--data",
+            str(data),
+            "stale",
+            "--as-of",
+            "2026-09-01",
+            "--inactive-days",
+            "0",
+        ]
+    ) == 2
+    assert "positive integer" in capsys.readouterr().err
