@@ -34,15 +34,16 @@ applyflow --data ~/private/applications.json add \
 
 applyflow --data ~/private/applications.json list
 applyflow --data ~/private/applications.json due --as-of 2026-09-08
+applyflow --data ~/private/applications.json pipeline
+applyflow --data ~/private/applications.json stale --inactive-days 14
 ```
 
 ApplyFlow supports saved, applied, interviewing, offer, rejected, and withdrawn
 stages. Invalid stage jumps are rejected, terminal outcomes clear follow-ups,
 and every accepted change is recorded in the local activity history.
 
-The `due` command returns status 1 when follow-ups need attention, which makes
-it useful in a personal script or scheduled local check. JSON reports are
+The `due` command returns status 1 when follow-ups need attention. The `pipeline` command summarizes stage counts and interview or offer conversion, while `stale` flags active records that have not changed recently. JSON reports are
 available with `--json` and omit source URLs and activity notes.
 
 See the [usage guide](docs/usage.md) and
-[privacy and safety guide](docs/privacy-and-safety.md) for details.
+[privacy and safety guide](docs/privacy-and-safety.md), and [analytics guide](docs/analytics.md) for details.
