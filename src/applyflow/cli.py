@@ -171,7 +171,7 @@ def run(argv: Sequence[str] | None = None) -> int:
             )
         )
         return 0 if not applications else 1
-    except (ApplicationError, StorageError) as exc:
+    except (ApplicationError, StorageError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
