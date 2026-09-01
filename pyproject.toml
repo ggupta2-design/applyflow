@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "applyflow"
-version = "0.1.0"
-description = "Local-first job application and follow-up workflow automation"
+version = "0.2.0"
+description = "Local-first job application tracking, analytics, and follow-up automation"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
