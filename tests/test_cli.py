@@ -118,3 +118,41 @@ def test_cli_rejects_malformed_store(tmp_path, capsys):
     data.write_text("not json", encoding="utf-8")
     assert run(["--data", str(data), "list"]) == 2
     assert "not valid JSON" in capsys.readouterr().err
+
+
+
+def test_pipeline_command_reports_stage_metrics(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+    assert run(
+        [
+            "--data",
+            str(data),
+            "add",
+            "--company",
+            "Example",
+            "--role",
+            "Analyst",
+            "--status",
+            "applied",
+        ]
+    ) == 0
+    capsys.readouterr()
+    assert run(
+        [
+            "--data",
+            str(data),
+            "add",
+            "--company",
+            "Other",
+            "--role",
+            "Engineer",
+        ]
+    ) == 0
+    capsys.readouterr()
+
+    assert run(["--data", str(data), "pipeline", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["total"] == 2
+    assert payload["submitted"] == 1
+    assert payload["status_counts"]["applied"] == 1
+    assert payload["status_counts"]["saved"] == 1
