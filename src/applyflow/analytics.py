@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Iterable
 
 from .models import Application, ApplicationStatus
@@ -66,4 +67,45 @@ def summarize_pipeline(applications: Iterable[Application]) -> PipelineSummary:
         interview_rate=(reached_interview / submitted * 100) if submitted else 0.0,
         offer_rate=(reached_offer / submitted * 100) if submitted else 0.0,
         status_counts=counts,
+    )
+
+
+
+@dataclass(frozen=True)
+class StaleApplication:
+    """An active record with no recent update."""
+
+    application: Application
+    inactive_days: int
+
+
+def find_stale_applications(
+    applications: Iterable[Application],
+    *,
+    as_of: date,
+    inactive_days: int = 14,
+) -> tuple[StaleApplication, ...]:
+    """Find active records unchanged for at least a reviewed threshold."""
+
+    if isinstance(inactive_days, bool) or inactive_days < 1:
+        raise ValueError("inactive_days must be a positive integer")
+    terminal = {ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN}
+    stale = tuple(
+        StaleApplication(
+            application=item,
+            inactive_days=(as_of - item.updated_at.date()).days,
+        )
+        for item in applications
+        if item.status not in terminal
+        and (as_of - item.updated_at.date()).days >= inactive_days
+    )
+    return tuple(
+        sorted(
+            stale,
+            key=lambda item: (
+                -item.inactive_days,
+                item.application.company.casefold(),
+                item.application.role.casefold(),
+            ),
+        )
     )
