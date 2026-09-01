@@ -8,12 +8,13 @@ from datetime import date
 from pathlib import Path
 from typing import Sequence
 
-from .analytics import summarize_pipeline
+from .analytics import find_stale_applications, summarize_pipeline
 from .models import ApplicationError, ApplicationStatus
 from .report import (
     format_applications,
     format_due_follow_ups,
     format_pipeline,
+    format_stale_applications,
 )
 from .service import (
     create_application,
@@ -83,6 +84,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     pipeline.add_argument("--json", action="store_true", dest="as_json")
 
+    stale = commands.add_parser(
+        "stale",
+        help="review active applications with no recent update",
+    )
+    stale.add_argument("--as-of", type=_date, default=date.today())
+    stale.add_argument("--inactive-days", type=int, default=14)
+    stale.add_argument("--json", action="store_true", dest="as_json")
+
     due = commands.add_parser("due", help="list follow-ups due by a date")
     due.add_argument("--as-of", type=_date, default=date.today())
     due.add_argument("--json", action="store_true", dest="as_json")
@@ -136,6 +145,22 @@ def run(argv: Sequence[str] | None = None) -> int:
             summary = summarize_pipeline(store.load())
             print(format_pipeline(summary, as_json=args.as_json))
             return 0
+
+        if args.command == "stale":
+            applications = find_stale_applications(
+                store.load(),
+                as_of=args.as_of,
+                inactive_days=args.inactive_days,
+            )
+            print(
+                format_stale_applications(
+                    applications,
+                    as_of=args.as_of,
+                    inactive_days=args.inactive_days,
+                    as_json=args.as_json,
+                )
+            )
+            return 0 if not applications else 1
 
         applications = due_follow_ups(store, as_of=args.as_of)
         print(
