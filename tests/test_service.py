@@ -175,7 +175,7 @@ def test_rejects_blank_manual_notes(tmp_path, note):
         now=NOW,
     )
 
-    with pytest.raises(ApplicationError, match="note is required"):
+    with pytest.raises(ApplicationError, match="note cannot be blank"):
         add_application_note(store, created.id, note, now=NOW)
 
 
