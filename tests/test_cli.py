@@ -218,3 +218,48 @@ def test_stale_command_rejects_invalid_thresholds(tmp_path, capsys):
         ]
     ) == 2
     assert "positive integer" in capsys.readouterr().err
+
+
+def test_note_command_records_note_without_echoing_it(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+    store = ApplicationStore(data)
+    application = create_application(
+        store,
+        company="Example",
+        role="Analyst",
+        application_id="app-1",
+    )
+    private_note = "Recruiter prefers a private contact channel"
+
+    assert run(
+        [
+            "--data",
+            str(data),
+            "note",
+            application.id,
+            "--text",
+            private_note,
+            "--json",
+        ]
+    ) == 0
+    output = capsys.readouterr().out
+    payload = json.loads(output)
+
+    assert payload["applications"][0]["id"] == application.id
+    assert private_note not in output
+    assert ApplicationStore(data).load()[0].history[-1].note == private_note
+
+
+def test_note_command_rejects_blank_text(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+    application = create_application(
+        ApplicationStore(data),
+        company="Example",
+        role="Analyst",
+        application_id="app-1",
+    )
+
+    assert run(
+        ["--data", str(data), "note", application.id, "--text", "   "]
+    ) == 2
+    assert "note is required" in capsys.readouterr().err
