@@ -4,16 +4,18 @@ from __future__ import annotations
 
 import argparse
 import sys
-from datetime import date
+from datetime import date, datetime, time, timezone
 from pathlib import Path
 from typing import Sequence
 
+from .activity import recent_activity
 from .analytics import find_stale_applications, summarize_pipeline
 from .models import ApplicationError, ApplicationStatus
 from .report import (
     format_applications,
     format_due_follow_ups,
     format_pipeline,
+    format_recent_activity,
     format_stale_applications,
     format_timeline,
 )
@@ -90,6 +92,15 @@ def build_parser() -> argparse.ArgumentParser:
     history.add_argument("application_id")
     history.add_argument("--include-notes", action="store_true")
     history.add_argument("--json", action="store_true", dest="as_json")
+
+    activity = commands.add_parser(
+        "activity",
+        help="review recent activity across applications",
+    )
+    activity.add_argument("--since", type=_date)
+    activity.add_argument("--limit", type=int, default=50)
+    activity.add_argument("--include-notes", action="store_true")
+    activity.add_argument("--json", action="store_true", dest="as_json")
 
     pipeline = commands.add_parser(
         "pipeline",
@@ -174,6 +185,26 @@ def run(argv: Sequence[str] | None = None) -> int:
             print(
                 format_timeline(
                     application,
+                    include_notes=args.include_notes,
+                    as_json=args.as_json,
+                )
+            )
+            return 0
+
+        if args.command == "activity":
+            since = (
+                datetime.combine(args.since, time.min, tzinfo=timezone.utc)
+                if args.since is not None
+                else None
+            )
+            records = recent_activity(
+                store.load(),
+                since=since,
+                limit=args.limit,
+            )
+            print(
+                format_recent_activity(
+                    records,
                     include_notes=args.include_notes,
                     as_json=args.as_json,
                 )
