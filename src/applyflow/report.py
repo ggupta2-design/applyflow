@@ -6,6 +6,7 @@ import json
 from datetime import date
 from typing import Iterable
 
+from .activity import ActivityRecord, application_timeline
 from .analytics import PipelineSummary, StaleApplication
 from .models import Application
 
@@ -159,4 +160,108 @@ def format_stale_applications(
             f"- {application.id} | {application.company} | {application.role} | "
             f"{application.status.value} | inactive {item.inactive_days} day(s)"
         )
+    return "\n".join(lines)
+
+
+def _activity_summary(
+    *,
+    at: object,
+    status: str,
+    note: str | None,
+    include_notes: bool,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "at": at.isoformat(),
+        "status": status,
+    }
+    if include_notes:
+        payload["note"] = note
+    return payload
+
+
+def format_timeline(
+    application: Application,
+    *,
+    include_notes: bool = False,
+    as_json: bool = False,
+) -> str:
+    """Format one timeline while withholding notes by default."""
+
+    activities = application_timeline(application)
+    payload = {
+        "application": application_summary(application),
+        "notes_included": include_notes,
+        "count": len(activities),
+        "activity": [
+            _activity_summary(
+                at=item.at,
+                status=item.status.value,
+                note=item.note,
+                include_notes=include_notes,
+            )
+            for item in activities
+        ],
+    }
+    if as_json:
+        return json.dumps(payload, indent=2, sort_keys=True)
+
+    lines = [
+        f"Activity for {application.id}: {len(activities)}",
+        f"{application.company} | {application.role}",
+        f"Notes: {'included' if include_notes else 'hidden'}",
+    ]
+    for item in activities:
+        line = f"- {item.at.isoformat()} | {item.status.value}"
+        if include_notes and item.note is not None:
+            line += f" | {item.note}"
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def format_recent_activity(
+    records: Iterable[ActivityRecord],
+    *,
+    include_notes: bool = False,
+    as_json: bool = False,
+) -> str:
+    """Format cross-application activity without leaking notes by default."""
+
+    selected = tuple(records)
+    activities = [
+        {
+            "application_id": item.application_id,
+            "company": item.company,
+            "role": item.role,
+            **_activity_summary(
+                at=item.activity.at,
+                status=item.activity.status.value,
+                note=item.activity.note,
+                include_notes=include_notes,
+            ),
+        }
+        for item in selected
+    ]
+    payload = {
+        "notes_included": include_notes,
+        "count": len(selected),
+        "activity": activities,
+    }
+    if as_json:
+        return json.dumps(payload, indent=2, sort_keys=True)
+
+    lines = [
+        f"Recent activity: {len(selected)}",
+        f"Notes: {'included' if include_notes else 'hidden'}",
+    ]
+    if not selected:
+        lines.append("Results: none")
+    for item in selected:
+        activity = item.activity
+        line = (
+            f"- {activity.at.isoformat()} | {item.application_id} | "
+            f"{item.company} | {item.role} | {activity.status.value}"
+        )
+        if include_notes and activity.note is not None:
+            line += f" | {activity.note}"
+        lines.append(line)
     return "\n".join(lines)
