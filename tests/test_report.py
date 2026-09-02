@@ -1,13 +1,16 @@
 import json
 from datetime import date, datetime, timezone
 
+from applyflow.activity import ActivityRecord
 from applyflow.analytics import StaleApplication, summarize_pipeline
 from applyflow.models import Activity, Application, ApplicationStatus
 from applyflow.report import (
     format_applications,
     format_due_follow_ups,
     format_pipeline,
+    format_recent_activity,
     format_stale_applications,
+    format_timeline,
 )
 
 
@@ -124,3 +127,66 @@ def test_formats_empty_stale_review():
         as_of=date(2026, 9, 1),
         inactive_days=14,
     )
+
+
+def test_timeline_hides_notes_until_explicitly_requested():
+    now = datetime(2026, 9, 2, tzinfo=timezone.utc)
+    secret = "Private recruiter context"
+    application = Application(
+        id="app-1",
+        company="Example",
+        role="Analyst",
+        created_at=now,
+        updated_at=now,
+        history=(Activity(at=now, status=ApplicationStatus.SAVED, note=secret),),
+    )
+
+    hidden_text = format_timeline(application)
+    hidden_json = json.loads(format_timeline(application, as_json=True))
+    assert secret not in hidden_text
+    assert "note" not in hidden_json["activity"][0]
+    assert hidden_json["notes_included"] is False
+
+    included_text = format_timeline(application, include_notes=True)
+    included_json = json.loads(
+        format_timeline(application, include_notes=True, as_json=True)
+    )
+    assert secret in included_text
+    assert included_json["activity"][0]["note"] == secret
+    assert included_json["notes_included"] is True
+
+
+def test_recent_activity_reports_context_with_note_opt_in():
+    now = datetime(2026, 9, 2, tzinfo=timezone.utc)
+    activity = Activity(
+        at=now,
+        status=ApplicationStatus.INTERVIEWING,
+        note="Private interview details",
+    )
+    records = (
+        ActivityRecord(
+            application_id="app-1",
+            company="Example",
+            role="Analyst",
+            activity=activity,
+        ),
+    )
+
+    text = format_recent_activity(records)
+    payload = json.loads(format_recent_activity(records, as_json=True))
+    assert "Example | Analyst | interviewing" in text
+    assert activity.note not in text
+    assert "note" not in payload["activity"][0]
+
+    included = json.loads(
+        format_recent_activity(records, include_notes=True, as_json=True)
+    )
+    assert included["activity"][0]["note"] == activity.note
+
+
+def test_recent_activity_formats_empty_results():
+    text = format_recent_activity(())
+    payload = json.loads(format_recent_activity((), as_json=True))
+    assert "Results: none" in text
+    assert payload["count"] == 0
+    assert payload["notes_included"] is False
