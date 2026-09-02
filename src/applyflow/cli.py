@@ -15,11 +15,13 @@ from .report import (
     format_due_follow_ups,
     format_pipeline,
     format_stale_applications,
+    format_timeline,
 )
 from .service import (
     add_application_note,
     create_application,
     due_follow_ups,
+    get_application,
     list_applications,
     schedule_follow_up,
     transition_application,
@@ -83,6 +85,11 @@ def build_parser() -> argparse.ArgumentParser:
     note.add_argument("application_id")
     note.add_argument("--text", required=True)
     note.add_argument("--json", action="store_true", dest="as_json")
+
+    history = commands.add_parser("history", help="review one application timeline")
+    history.add_argument("application_id")
+    history.add_argument("--include-notes", action="store_true")
+    history.add_argument("--json", action="store_true", dest="as_json")
 
     pipeline = commands.add_parser(
         "pipeline",
@@ -158,6 +165,17 @@ def run(argv: Sequence[str] | None = None) -> int:
                     (application,),
                     as_json=args.as_json,
                     heading="Note recorded",
+                )
+            )
+            return 0
+
+        if args.command == "history":
+            application = get_application(store, args.application_id)
+            print(
+                format_timeline(
+                    application,
+                    include_notes=args.include_notes,
+                    as_json=args.as_json,
                 )
             )
             return 0
