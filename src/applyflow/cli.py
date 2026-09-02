@@ -17,6 +17,7 @@ from .report import (
     format_stale_applications,
 )
 from .service import (
+    add_application_note,
     create_application,
     due_follow_ups,
     list_applications,
@@ -77,6 +78,11 @@ def build_parser() -> argparse.ArgumentParser:
     target.add_argument("--on", type=_date)
     target.add_argument("--clear", action="store_true")
     schedule.add_argument("--json", action="store_true", dest="as_json")
+
+    note = commands.add_parser("note", help="append a private note without changing status")
+    note.add_argument("application_id")
+    note.add_argument("--text", required=True)
+    note.add_argument("--json", action="store_true", dest="as_json")
 
     pipeline = commands.add_parser(
         "pipeline",
@@ -139,6 +145,21 @@ def run(argv: Sequence[str] | None = None) -> int:
                 None if args.clear else args.on,
             )
             print(format_applications((application,), as_json=args.as_json, heading="Updated"))
+            return 0
+
+        if args.command == "note":
+            application = add_application_note(
+                store,
+                args.application_id,
+                args.text,
+            )
+            print(
+                format_applications(
+                    (application,),
+                    as_json=args.as_json,
+                    heading="Note recorded",
+                )
+            )
             return 0
 
         if args.command == "pipeline":
