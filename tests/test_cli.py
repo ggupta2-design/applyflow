@@ -263,3 +263,40 @@ def test_note_command_rejects_blank_text(tmp_path, capsys):
         ["--data", str(data), "note", application.id, "--text", "   "]
     ) == 2
     assert "note is required" in capsys.readouterr().err
+
+
+def test_history_command_requires_explicit_note_disclosure(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+    application = create_application(
+        ApplicationStore(data),
+        company="Example",
+        role="Analyst",
+        application_id="app-1",
+    )
+    private_note = "Private preparation details"
+    assert run(
+        ["--data", str(data), "note", application.id, "--text", private_note]
+    ) == 0
+    capsys.readouterr()
+
+    assert run(
+        ["--data", str(data), "history", application.id, "--json"]
+    ) == 0
+    hidden_output = capsys.readouterr().out
+    hidden = json.loads(hidden_output)
+    assert hidden["notes_included"] is False
+    assert private_note not in hidden_output
+
+    assert run(
+        [
+            "--data",
+            str(data),
+            "history",
+            application.id,
+            "--include-notes",
+            "--json",
+        ]
+    ) == 0
+    included = json.loads(capsys.readouterr().out)
+    assert included["notes_included"] is True
+    assert included["activity"][-1]["note"] == private_note
