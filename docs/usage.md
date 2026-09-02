@@ -80,3 +80,28 @@ The stale command returns status 1 when records need manual review and 0 when
 none meet the threshold. Rejected and withdrawn applications are excluded.
 Neither command exposes source URLs or activity notes. See
 [analytics.md](analytics.md) for metric definitions and privacy boundaries.
+
+
+## Record and review activity
+
+Append a private note without moving the application to another stage:
+
+```bash
+applyflow --data ~/private/applications.json note APPLICATION_ID \
+  --text "Portfolio requested"
+```
+
+Review one application's full timeline or a bounded cross-application feed:
+
+```bash
+applyflow --data ~/private/applications.json history APPLICATION_ID
+applyflow --data ~/private/applications.json activity \
+  --since 2026-09-01 \
+  --limit 25 \
+  --json
+```
+
+Activity notes are omitted from text and JSON reports by default. Use
+`--include-notes` only for a private destination where the note content is
+needed. See [activity.md](activity.md) for ordering, limits, and privacy
+guidance.
