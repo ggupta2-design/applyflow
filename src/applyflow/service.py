@@ -173,6 +173,37 @@ def transition_application(
 
 
 
+def add_application_note(
+    store: ApplicationStore,
+    application_id: str,
+    note: str,
+    *,
+    now: datetime | None = None,
+) -> Application:
+    """Append a private manual note without changing workflow state."""
+
+    clean_note = validate_text(note, "note")
+    if len(clean_note) > 2000:
+        raise ApplicationError("note cannot exceed 2000 characters")
+
+    applications = store.load()
+    current = next((item for item in applications if item.id == application_id), None)
+    if current is None:
+        raise ApplicationError(f"Application not found: {application_id}")
+
+    timestamp = now or datetime.now(timezone.utc)
+    updated = replace(
+        current,
+        updated_at=timestamp,
+        history=(
+            *current.history,
+            Activity(at=timestamp, status=current.status, note=clean_note),
+        ),
+    )
+    store.save(tuple(updated if item.id == updated.id else item for item in applications))
+    return updated
+
+
 def schedule_follow_up(
     store: ApplicationStore,
     application_id: str,
