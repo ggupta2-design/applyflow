@@ -4,6 +4,7 @@ import pytest
 
 from applyflow.models import ApplicationError, ApplicationStatus
 from applyflow.service import (
+    add_application_note,
     create_application,
     due_follow_ups,
     get_application,
@@ -137,3 +138,56 @@ def test_terminal_status_clears_and_blocks_follow_ups(tmp_path):
     assert rejected.follow_up_on is None
     with pytest.raises(ApplicationError, match="Cannot schedule"):
         schedule_follow_up(store, created.id, date(2026, 9, 5), now=NOW)
+
+
+def test_adds_manual_notes_without_changing_status(tmp_path):
+    store = ApplicationStore(tmp_path / "applications.json")
+    created = create_application(
+        store,
+        company="Example",
+        role="Analyst",
+        application_id="app-1",
+        now=NOW,
+    )
+    later = datetime(2026, 9, 1, 18, 0, tzinfo=timezone.utc)
+
+    updated = add_application_note(
+        store,
+        created.id,
+        "  Recruiter requested a portfolio  ",
+        now=later,
+    )
+
+    assert updated.status == created.status
+    assert updated.updated_at == later
+    assert updated.history[-1].note == "Recruiter requested a portfolio"
+    assert get_application(store, created.id) == updated
+
+
+@pytest.mark.parametrize("note", ["", "   ", "\n"])
+def test_rejects_blank_manual_notes(tmp_path, note):
+    store = ApplicationStore(tmp_path / "applications.json")
+    created = create_application(
+        store,
+        company="Example",
+        role="Analyst",
+        application_id="app-1",
+        now=NOW,
+    )
+
+    with pytest.raises(ApplicationError, match="note is required"):
+        add_application_note(store, created.id, note, now=NOW)
+
+
+def test_rejects_oversized_manual_notes(tmp_path):
+    store = ApplicationStore(tmp_path / "applications.json")
+    created = create_application(
+        store,
+        company="Example",
+        role="Analyst",
+        application_id="app-1",
+        now=NOW,
+    )
+
+    with pytest.raises(ApplicationError, match="2000"):
+        add_application_note(store, created.id, "x" * 2001, now=NOW)
