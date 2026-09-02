@@ -300,3 +300,48 @@ def test_history_command_requires_explicit_note_disclosure(tmp_path, capsys):
     included = json.loads(capsys.readouterr().out)
     assert included["notes_included"] is True
     assert included["activity"][-1]["note"] == private_note
+
+
+def test_activity_command_filters_dates_and_limits_results(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+    store = ApplicationStore(data)
+    create_application(
+        store,
+        company="Older",
+        role="Analyst",
+        application_id="old",
+        now=datetime(2026, 8, 30, tzinfo=timezone.utc),
+    )
+    create_application(
+        store,
+        company="Recent",
+        role="Engineer",
+        application_id="new",
+        now=datetime(2026, 9, 2, tzinfo=timezone.utc),
+    )
+
+    assert run(
+        [
+            "--data",
+            str(data),
+            "activity",
+            "--since",
+            "2026-09-01",
+            "--limit",
+            "1",
+            "--json",
+        ]
+    ) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["count"] == 1
+    assert payload["activity"][0]["application_id"] == "new"
+    assert payload["notes_included"] is False
+
+
+def test_activity_command_rejects_invalid_limit(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+
+    assert run(
+        ["--data", str(data), "activity", "--limit", "0"]
+    ) == 2
+    assert "positive integer" in capsys.readouterr().err
