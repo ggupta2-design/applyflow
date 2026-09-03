@@ -11,8 +11,8 @@ private career data. Keep it outside public repositories and do not put
 passwords, access tokens, government identifiers, demographic answers, salary
 documents, or private recruiter messages in notes.
 
-ApplyFlow's default summaries, timelines, and recent-activity reports omit
-source URLs and activity notes to reduce accidental disclosure. Timeline commands
+ApplyFlow's default summaries, timelines, recent-activity reports, and daily
+plans omit source URLs and activity notes to reduce accidental disclosure. Timeline commands
 include note text only after the explicit `--include-notes` option. Company names, role names, dates, and local record IDs
 still appear in reports.
 
@@ -26,6 +26,7 @@ still appear in reports.
 - Local application data patterns are excluded by `.gitignore`.
 - Manual notes reject blank text and input longer than 2,000 characters.
 - Activity reviews are bounded and hide note text by default.
+- Daily plans are read-only, bounded, deduplicated, and never include note text.
 
 Atomic replacement helps prevent partial writes but is not backup or encryption.
 Use operating-system disk encryption and a private backup if needed.
