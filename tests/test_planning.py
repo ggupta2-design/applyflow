@@ -91,3 +91,70 @@ def test_rejects_invalid_plan_thresholds(argument, value, message):
 
     with pytest.raises(ValueError, match=message):
         build_action_plan((), as_of=AS_OF, **options)
+
+
+def test_adds_stale_applications_after_follow_up_priorities():
+    stale = Application(
+        id="stale",
+        company="Old Company",
+        role="Engineer",
+        status=ApplicationStatus.APPLIED,
+        created_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+        updated_at=datetime(2026, 8, 15, tzinfo=timezone.utc),
+    )
+    due = _application("due", follow_up_on=AS_OF)
+
+    plan = build_action_plan(
+        (stale, due),
+        as_of=AS_OF,
+        inactive_days=14,
+    )
+
+    assert [item.kind for item in plan.items] == [
+        ActionKind.DUE_TODAY,
+        ActionKind.STALE_APPLICATION,
+    ]
+    assert plan.items[-1].inactive_days == 19
+    assert plan.items[-1].days_until is None
+
+
+def test_follow_up_action_prevents_duplicate_stale_action():
+    stale_with_follow_up = Application(
+        id="stale-due",
+        company="Old Company",
+        role="Engineer",
+        status=ApplicationStatus.APPLIED,
+        follow_up_on=AS_OF,
+        created_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+        updated_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+    )
+
+    plan = build_action_plan(
+        (stale_with_follow_up,),
+        as_of=AS_OF,
+        inactive_days=14,
+    )
+
+    assert len(plan.items) == 1
+    assert plan.items[0].kind == ActionKind.DUE_TODAY
+
+
+def test_stale_items_are_ordered_oldest_update_first():
+    older = Application(
+        id="older",
+        company="Two",
+        role="Analyst",
+        created_at=datetime(2026, 7, 1, tzinfo=timezone.utc),
+        updated_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+    )
+    newer = Application(
+        id="newer",
+        company="One",
+        role="Analyst",
+        created_at=datetime(2026, 7, 1, tzinfo=timezone.utc),
+        updated_at=datetime(2026, 8, 10, tzinfo=timezone.utc),
+    )
+
+    plan = build_action_plan((newer, older), as_of=AS_OF)
+
+    assert [item.application.id for item in plan.items] == ["older", "newer"]
