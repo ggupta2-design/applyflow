@@ -16,6 +16,7 @@ class ActionKind(str, Enum):
     OVERDUE_FOLLOW_UP = "overdue_follow_up"
     DUE_TODAY = "due_today"
     UPCOMING_FOLLOW_UP = "upcoming_follow_up"
+    STALE_APPLICATION = "stale_application"
 
 
 @dataclass(frozen=True)
@@ -25,7 +26,8 @@ class ActionItem:
     kind: ActionKind
     application: Application
     target_on: date
-    days_until: int
+    days_until: int | None
+    inactive_days: int | None = None
 
 
 @dataclass(frozen=True)
@@ -44,6 +46,7 @@ _PRIORITY = {
     ActionKind.OVERDUE_FOLLOW_UP: 0,
     ActionKind.DUE_TODAY: 1,
     ActionKind.UPCOMING_FOLLOW_UP: 2,
+    ActionKind.STALE_APPLICATION: 3,
 }
 
 
@@ -81,24 +84,39 @@ def build_action_plan(
     items: list[ActionItem] = []
 
     for application in applications:
-        follow_up = application.follow_up_on
-        if application.status in terminal or follow_up is None or follow_up > horizon:
+        if application.status in terminal:
             continue
-        days_until = (follow_up - as_of).days
-        if days_until < 0:
-            kind = ActionKind.OVERDUE_FOLLOW_UP
-        elif days_until == 0:
-            kind = ActionKind.DUE_TODAY
-        else:
-            kind = ActionKind.UPCOMING_FOLLOW_UP
-        items.append(
-            ActionItem(
-                kind=kind,
-                application=application,
-                target_on=follow_up,
-                days_until=days_until,
+
+        follow_up = application.follow_up_on
+        if follow_up is not None and follow_up <= horizon:
+            days_until = (follow_up - as_of).days
+            if days_until < 0:
+                kind = ActionKind.OVERDUE_FOLLOW_UP
+            elif days_until == 0:
+                kind = ActionKind.DUE_TODAY
+            else:
+                kind = ActionKind.UPCOMING_FOLLOW_UP
+            items.append(
+                ActionItem(
+                    kind=kind,
+                    application=application,
+                    target_on=follow_up,
+                    days_until=days_until,
+                )
             )
-        )
+            continue
+
+        days_inactive = (as_of - application.updated_at.date()).days
+        if days_inactive >= inactive_days:
+            items.append(
+                ActionItem(
+                    kind=ActionKind.STALE_APPLICATION,
+                    application=application,
+                    target_on=application.updated_at.date(),
+                    days_until=None,
+                    inactive_days=days_inactive,
+                )
+            )
 
     items.sort(
         key=lambda item: (
