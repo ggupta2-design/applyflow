@@ -105,3 +105,22 @@ Activity notes are omitted from text and JSON reports by default. Use
 `--include-notes` only for a private destination where the note content is
 needed. See [activity.md](activity.md) for ordering, limits, and privacy
 guidance.
+
+
+## Build a daily action plan
+
+Combine overdue, due, upcoming, and stale-record reviews without changing data:
+
+```bash
+applyflow --data ~/private/applications.json plan \
+  --as-of 2026-09-03 \
+  --horizon-days 7 \
+  --inactive-days 14 \
+  --limit 25
+```
+
+Add `--json` for automation. The command returns status 1 when the plan has
+actions, 0 when it is empty, and 2 for invalid input. Each application appears
+at most once, follow-up actions take priority over staleness, and source URLs
+and notes are always omitted. See [daily-plans.md](daily-plans.md) for the full
+priority rules and safety boundaries.
