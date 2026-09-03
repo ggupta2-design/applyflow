@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 — 2026-09-03
+
+- Added read-only daily action plans for active applications.
+- Prioritized overdue, due-today, upcoming, and stale-record reviews.
+- Deduplicated actions so follow-up work takes precedence over stale reminders.
+- Added configurable planning horizons, stale thresholds, and output limits.
+- Added deterministic ordering and explicit truncation metadata.
+- Added privacy-safe readable and JSON reports.
+- Added a plan CLI command with automation-friendly exit statuses.
+- Added planning tests, workflow documentation, and privacy guidance.
+
 ## 0.3.0 — 2026-09-02
 
 - Added validated manual notes without implicit status changes.
