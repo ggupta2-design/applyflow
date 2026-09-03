@@ -8,6 +8,7 @@ The first release focuses on a safe application workflow:
 - record saved and submitted opportunities;
 - move applications through explicit, validated stages;
 - schedule and review follow-ups;
+- build a prioritized daily action plan from follow-ups and stale records;
 - keep an append-only activity history and private manual notes;
 - review one timeline or bounded recent activity with notes hidden by default;
 - produce readable or JSON summaries for personal automation.
@@ -40,15 +41,18 @@ applyflow --data ~/private/applications.json stale --inactive-days 14
 applyflow --data ~/private/applications.json note APPLICATION_ID --text "Portfolio requested"
 applyflow --data ~/private/applications.json history APPLICATION_ID
 applyflow --data ~/private/applications.json activity --since 2026-09-01 --limit 25
+applyflow --data ~/private/applications.json plan --as-of 2026-09-03 --json
 ```
 
 ApplyFlow supports saved, applied, interviewing, offer, rejected, and withdrawn
 stages. Invalid stage jumps are rejected, terminal outcomes clear follow-ups,
 and every accepted change is recorded in the local activity history.
 
-The `due` command returns status 1 when follow-ups need attention. The `pipeline` command summarizes stage counts and interview or offer conversion, while `stale` flags active records that have not changed recently. JSON reports are
+The `due` command returns status 1 when follow-ups need attention. The `plan`
+command builds a bounded, deduplicated daily list of overdue, upcoming, and
+stale-record reviews. The `pipeline` command summarizes stage counts and interview or offer conversion, while `stale` flags active records that have not changed recently. JSON reports are
 available with `--json` and omit source URLs and activity notes. The `history`
 and `activity` commands reveal notes only with an explicit `--include-notes`.
 
 See the [usage guide](docs/usage.md) and
-[privacy and safety guide](docs/privacy-and-safety.md), [analytics guide](docs/analytics.md), and [activity guide](docs/activity.md) for details.
+[privacy and safety guide](docs/privacy-and-safety.md), [analytics guide](docs/analytics.md), and [activity guide](docs/activity.md), and [daily planning guide](docs/daily-plans.md) for details.
