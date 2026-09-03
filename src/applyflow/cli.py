@@ -11,7 +11,9 @@ from typing import Sequence
 from .activity import recent_activity
 from .analytics import find_stale_applications, summarize_pipeline
 from .models import ApplicationError, ApplicationStatus
+from .planning import build_action_plan
 from .report import (
+    format_action_plan,
     format_applications,
     format_due_follow_ups,
     format_pipeline,
@@ -101,6 +103,16 @@ def build_parser() -> argparse.ArgumentParser:
     activity.add_argument("--limit", type=int, default=50)
     activity.add_argument("--include-notes", action="store_true")
     activity.add_argument("--json", action="store_true", dest="as_json")
+
+    plan = commands.add_parser(
+        "plan",
+        help="build a prioritized daily application action list",
+    )
+    plan.add_argument("--as-of", type=_date, default=date.today())
+    plan.add_argument("--horizon-days", type=int, default=7)
+    plan.add_argument("--inactive-days", type=int, default=14)
+    plan.add_argument("--limit", type=int, default=25)
+    plan.add_argument("--json", action="store_true", dest="as_json")
 
     pipeline = commands.add_parser(
         "pipeline",
@@ -210,6 +222,17 @@ def run(argv: Sequence[str] | None = None) -> int:
                 )
             )
             return 0
+
+        if args.command == "plan":
+            plan = build_action_plan(
+                store.load(),
+                as_of=args.as_of,
+                horizon_days=args.horizon_days,
+                inactive_days=args.inactive_days,
+                limit=args.limit,
+            )
+            print(format_action_plan(plan, as_json=args.as_json))
+            return 0 if not plan.items else 1
 
         if args.command == "pipeline":
             summary = summarize_pipeline(store.load())
