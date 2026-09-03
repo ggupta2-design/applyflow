@@ -9,6 +9,7 @@ from .analytics import (
     summarize_pipeline,
 )
 from .models import Activity, Application, ApplicationError, ApplicationStatus
+from .planning import ActionItem, ActionKind, ActionPlan, build_action_plan
 from .service import (
     add_application_note,
     create_application,
@@ -23,6 +24,9 @@ from .storage import ApplicationStore, StorageError
 __all__ = [
     "Activity",
     "ActivityRecord",
+    "ActionItem",
+    "ActionKind",
+    "ActionPlan",
     "PipelineSummary",
     "StaleApplication",
     "StatusCount",
@@ -33,6 +37,7 @@ __all__ = [
     "StorageError",
     "add_application_note",
     "application_timeline",
+    "build_action_plan",
     "create_application",
     "due_follow_ups",
     "find_stale_applications",
@@ -44,4 +49,4 @@ __all__ = [
     "transition_application",
     "__version__",
 ]
-__version__ = "0.3.0"
+__version__ = "0.4.0"
