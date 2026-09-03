@@ -399,3 +399,46 @@ def test_plan_command_returns_zero_for_empty_plan(tmp_path, capsys):
 
     assert payload["count"] == 0
     assert payload["truncated"] is False
+
+
+def test_plan_command_rejects_unsafe_thresholds(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+
+    assert run(
+        [
+            "--data",
+            str(data),
+            "plan",
+            "--as-of",
+            "2026-09-03",
+            "--horizon-days",
+            "-1",
+        ]
+    ) == 2
+    assert "non-negative integer" in capsys.readouterr().err
+
+    assert run(
+        [
+            "--data",
+            str(data),
+            "plan",
+            "--as-of",
+            "2026-09-03",
+            "--inactive-days",
+            "0",
+        ]
+    ) == 2
+    assert "positive integer" in capsys.readouterr().err
+
+    assert run(
+        [
+            "--data",
+            str(data),
+            "plan",
+            "--as-of",
+            "2026-09-03",
+            "--limit",
+            "0",
+        ]
+    ) == 2
+    assert "positive integer" in capsys.readouterr().err
