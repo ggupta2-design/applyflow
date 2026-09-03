@@ -9,6 +9,7 @@ from typing import Iterable
 from .activity import ActivityRecord, application_timeline
 from .analytics import PipelineSummary, StaleApplication
 from .models import Application
+from .planning import ActionKind, ActionPlan
 
 
 def application_summary(application: Application) -> dict[str, object]:
@@ -264,4 +265,59 @@ def format_recent_activity(
         if include_notes and activity.note is not None:
             line += f" | {activity.note}"
         lines.append(line)
+    return "\n".join(lines)
+
+
+def format_action_plan(plan: ActionPlan, *, as_json: bool = False) -> str:
+    """Format a daily plan without source URLs or activity notes."""
+
+    actions = [
+        {
+            "kind": item.kind.value,
+            "application": application_summary(item.application),
+            "target_on": item.target_on.isoformat(),
+            "days_until": item.days_until,
+            "inactive_days": item.inactive_days,
+        }
+        for item in plan.items
+    ]
+    payload = {
+        "as_of": plan.as_of.isoformat(),
+        "horizon_days": plan.horizon_days,
+        "inactive_days": plan.inactive_days,
+        "count": len(plan.items),
+        "total_candidates": plan.total_candidates,
+        "truncated": plan.truncated,
+        "actions": actions,
+    }
+    if as_json:
+        return json.dumps(payload, indent=2, sort_keys=True)
+
+    lines = [
+        f"Daily action plan for {plan.as_of.isoformat()}: {len(plan.items)}",
+        f"Planning horizon: {plan.horizon_days} day(s)",
+        f"Stale threshold: {plan.inactive_days} day(s)",
+    ]
+    if plan.truncated:
+        lines.append(
+            f"Showing {len(plan.items)} of {plan.total_candidates} candidates"
+        )
+    if not plan.items:
+        lines.append("Results: none")
+        return "\n".join(lines)
+
+    for item in plan.items:
+        application = item.application
+        if item.kind == ActionKind.OVERDUE_FOLLOW_UP:
+            reason = f"follow-up overdue by {abs(item.days_until or 0)} day(s)"
+        elif item.kind == ActionKind.DUE_TODAY:
+            reason = "follow-up due today"
+        elif item.kind == ActionKind.UPCOMING_FOLLOW_UP:
+            reason = f"follow-up due in {item.days_until} day(s)"
+        else:
+            reason = f"inactive for {item.inactive_days} day(s)"
+        lines.append(
+            f"- {item.kind.value} | {application.id} | {application.company} | "
+            f"{application.role} | {reason}"
+        )
     return "\n".join(lines)
