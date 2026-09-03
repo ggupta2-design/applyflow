@@ -345,3 +345,57 @@ def test_activity_command_rejects_invalid_limit(tmp_path, capsys):
         ["--data", str(data), "activity", "--limit", "0"]
     ) == 2
     assert "positive integer" in capsys.readouterr().err
+
+
+def test_plan_command_reports_prioritized_actions(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+    store = ApplicationStore(data)
+    create_application(
+        store,
+        company="Overdue",
+        role="Analyst",
+        application_id="overdue",
+        follow_up_on=datetime(2026, 9, 1).date(),
+        now=datetime(2026, 8, 20, tzinfo=timezone.utc),
+    )
+    create_application(
+        store,
+        company="Upcoming",
+        role="Engineer",
+        application_id="upcoming",
+        follow_up_on=datetime(2026, 9, 5).date(),
+        now=datetime(2026, 9, 2, tzinfo=timezone.utc),
+    )
+
+    assert run(
+        [
+            "--data",
+            str(data),
+            "plan",
+            "--as-of",
+            "2026-09-03",
+            "--horizon-days",
+            "7",
+            "--json",
+        ]
+    ) == 1
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["count"] == 2
+    assert [item["kind"] for item in payload["actions"]] == [
+        "overdue_follow_up",
+        "upcoming_follow_up",
+    ]
+    assert payload["actions"][0]["application"]["id"] == "overdue"
+
+
+def test_plan_command_returns_zero_for_empty_plan(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+
+    assert run(
+        ["--data", str(data), "plan", "--as-of", "2026-09-03", "--json"]
+    ) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["count"] == 0
+    assert payload["truncated"] is False
