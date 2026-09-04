@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from applyflow.backup import create_backup, verify_backup
+from applyflow.backup import create_backup, restore_backup, verify_backup
 from applyflow.models import Application
 from applyflow.storage import ApplicationStore, StorageError
 
@@ -102,3 +102,48 @@ def test_verification_rejects_invalid_backup_schema(tmp_path):
 
     with pytest.raises(StorageError, match="Unsupported"):
         verify_backup(path)
+
+
+def test_restores_validated_backup_to_new_store(tmp_path):
+    source = _store(tmp_path / "applications.json")
+    backup = create_backup(source, tmp_path / "backup.json")
+    restored_path = tmp_path / "restored" / "applications.json"
+
+    restored = restore_backup(
+        backup.path,
+        restored_path,
+        confirmed=True,
+    )
+
+    assert restored.path == restored_path
+    assert restored.application_count == 1
+    assert restored.sha256 == backup.sha256
+    assert ApplicationStore(restored_path).load() == source.load()
+
+
+def test_restore_requires_confirmation_and_preserves_destination(tmp_path):
+    source = _store(tmp_path / "applications.json")
+    backup = create_backup(source, tmp_path / "backup.json")
+    destination = tmp_path / "restored.json"
+
+    with pytest.raises(StorageError, match="explicit confirmation"):
+        restore_backup(backup.path, destination)
+
+    assert not destination.exists()
+
+    destination.write_text("keep me", encoding="utf-8")
+    with pytest.raises(StorageError, match="already exists"):
+        restore_backup(backup.path, destination, confirmed=True)
+
+    assert destination.read_text(encoding="utf-8") == "keep me"
+
+
+def test_restore_rejects_malformed_backup_before_writing(tmp_path):
+    backup = tmp_path / "broken.json"
+    backup.write_text("not json", encoding="utf-8")
+    destination = tmp_path / "restored.json"
+
+    with pytest.raises(StorageError, match="not valid JSON"):
+        restore_backup(backup, destination, confirmed=True)
+
+    assert not destination.exists()
