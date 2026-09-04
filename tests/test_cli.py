@@ -442,3 +442,53 @@ def test_plan_command_rejects_unsafe_thresholds(tmp_path, capsys):
         ]
     ) == 2
     assert "positive integer" in capsys.readouterr().err
+
+
+def test_backup_and_verification_commands(tmp_path, capsys):
+    data = tmp_path / "private" / "applications.json"
+    backup = tmp_path / "backups" / "applyflow.json"
+    create_application(
+        ApplicationStore(data),
+        company="Example",
+        role="Analyst",
+        application_id="app-1",
+    )
+
+    assert run(
+        ["--data", str(data), "backup", str(backup), "--json"]
+    ) == 0
+    created = json.loads(capsys.readouterr().out)
+    assert created["action"] == "created"
+    assert created["application_count"] == 1
+    assert created["file"] == "applyflow.json"
+    assert str(tmp_path) not in json.dumps(created)
+
+    assert run(
+        [
+            "--data",
+            str(data),
+            "verify-backup",
+            str(backup),
+            "--sha256",
+            created["sha256"],
+            "--json",
+        ]
+    ) == 0
+    verified = json.loads(capsys.readouterr().out)
+    assert verified["action"] == "verified"
+    assert verified["sha256"] == created["sha256"]
+
+
+def test_backup_command_refuses_overwrite(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+    backup = tmp_path / "backup.json"
+    create_application(
+        ApplicationStore(data),
+        company="Example",
+        role="Analyst",
+    )
+    backup.write_text("keep me", encoding="utf-8")
+
+    assert run(["--data", str(data), "backup", str(backup)]) == 2
+    assert "already exists" in capsys.readouterr().err
+    assert backup.read_text(encoding="utf-8") == "keep me"
