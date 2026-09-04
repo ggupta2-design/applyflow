@@ -124,3 +124,34 @@ actions, 0 when it is empty, and 2 for invalid input. Each application appears
 at most once, follow-up actions take priority over staleness, and source URLs
 and notes are always omitted. See [daily-plans.md](daily-plans.md) for the full
 priority rules and safety boundaries.
+
+
+## Back up and recover local data
+
+Create a validated snapshot at a new path:
+
+```bash
+applyflow --data ~/private/applications.json backup \
+  ~/private/backups/applyflow.json \
+  --json
+```
+
+Verify its schema and recorded checksum without changing it:
+
+```bash
+applyflow verify-backup ~/private/backups/applyflow.json \
+  --sha256 EXPECTED_SHA256
+```
+
+Restore only to a new output path with explicit confirmation:
+
+```bash
+applyflow restore ~/private/backups/applyflow.json \
+  --output ~/private/recovered/applications.json \
+  --confirm
+```
+
+Backup and restore operations refuse to overwrite files. Reports contain only
+value-free metadata and omit parent directories. See
+[backups.md](backups.md) for the complete recovery workflow and security
+boundaries.
