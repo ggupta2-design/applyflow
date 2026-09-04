@@ -27,9 +27,13 @@ still appear in reports.
 - Manual notes reject blank text and input longer than 2,000 characters.
 - Activity reviews are bounded and hide note text by default.
 - Daily plans are read-only, bounded, deduplicated, and never include note text.
+- Backups are schema-validated, written atomically, and never overwrite files.
+- Restore operations require confirmation and only write to a new destination.
 
-Atomic replacement helps prevent partial writes but is not backup or encryption.
-Use operating-system disk encryption and a private backup if needed.
+Atomic replacement helps prevent partial writes. ApplyFlow backups provide local
+recovery and SHA-256 change detection, but they are not encryption or proof of
+authenticity. Use operating-system disk encryption, restrictive permissions, and
+a private backup location.
 
 ## Workflow boundaries
 
