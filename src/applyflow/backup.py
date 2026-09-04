@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -76,7 +77,7 @@ def verify_backup(
         expected = expected_sha256.strip().lower()
         if len(expected) != 64 or any(character not in "0123456789abcdef" for character in expected):
             raise StorageError("expected_sha256 must be a 64-character hexadecimal digest")
-        if not hashlib.compare_digest(digest, expected):
+        if not hmac.compare_digest(digest, expected):
             raise StorageError("Backup checksum does not match expected SHA-256")
 
     return BackupSummary(
