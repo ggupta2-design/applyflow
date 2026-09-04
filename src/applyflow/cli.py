@@ -10,7 +10,7 @@ from typing import Sequence
 
 from .activity import recent_activity
 from .analytics import find_stale_applications, summarize_pipeline
-from .backup import create_backup, verify_backup
+from .backup import create_backup, restore_backup, verify_backup
 from .models import ApplicationError, ApplicationStatus
 from .planning import build_action_plan
 from .report import (
@@ -130,6 +130,15 @@ def build_parser() -> argparse.ArgumentParser:
     verify.add_argument("backup", type=Path)
     verify.add_argument("--sha256")
     verify.add_argument("--json", action="store_true", dest="as_json")
+
+    restore = commands.add_parser(
+        "restore",
+        help="restore a validated backup to a new store",
+    )
+    restore.add_argument("backup", type=Path)
+    restore.add_argument("--output", type=Path, required=True)
+    restore.add_argument("--confirm", action="store_true")
+    restore.add_argument("--json", action="store_true", dest="as_json")
 
     pipeline = commands.add_parser(
         "pipeline",
@@ -271,6 +280,21 @@ def run(argv: Sequence[str] | None = None) -> int:
                 format_backup_summary(
                     summary,
                     action="verified",
+                    as_json=args.as_json,
+                )
+            )
+            return 0
+
+        if args.command == "restore":
+            summary = restore_backup(
+                args.backup,
+                args.output,
+                confirmed=args.confirm,
+            )
+            print(
+                format_backup_summary(
+                    summary,
+                    action="restored",
                     as_json=args.as_json,
                 )
             )
