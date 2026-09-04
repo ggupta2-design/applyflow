@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "applyflow"
-version = "0.4.0"
-description = "Local-first job application tracking, daily planning, analytics, and follow-up automation"
+version = "0.5.0"
+description = "Local-first job application tracking, safe backups, daily planning, and analytics"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
