@@ -492,3 +492,68 @@ def test_backup_command_refuses_overwrite(tmp_path, capsys):
     assert run(["--data", str(data), "backup", str(backup)]) == 2
     assert "already exists" in capsys.readouterr().err
     assert backup.read_text(encoding="utf-8") == "keep me"
+
+
+def test_restore_command_requires_confirmation(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+    backup = tmp_path / "backup.json"
+    output = tmp_path / "restored.json"
+    create_application(
+        ApplicationStore(data),
+        company="Example",
+        role="Analyst",
+        application_id="app-1",
+    )
+    assert run(["--data", str(data), "backup", str(backup)]) == 0
+    capsys.readouterr()
+
+    assert run(
+        ["--data", str(data), "restore", str(backup), "--output", str(output)]
+    ) == 2
+    assert "explicit confirmation" in capsys.readouterr().err
+    assert not output.exists()
+
+    assert run(
+        [
+            "--data",
+            str(data),
+            "restore",
+            str(backup),
+            "--output",
+            str(output),
+            "--confirm",
+            "--json",
+        ]
+    ) == 0
+    restored = json.loads(capsys.readouterr().out)
+    assert restored["action"] == "restored"
+    assert restored["application_count"] == 1
+    assert ApplicationStore(output).load()[0].id == "app-1"
+
+
+def test_restore_command_never_replaces_existing_output(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+    backup = tmp_path / "backup.json"
+    output = tmp_path / "existing.json"
+    create_application(
+        ApplicationStore(data),
+        company="Example",
+        role="Analyst",
+    )
+    assert run(["--data", str(data), "backup", str(backup)]) == 0
+    capsys.readouterr()
+    output.write_text("keep me", encoding="utf-8")
+
+    assert run(
+        [
+            "--data",
+            str(data),
+            "restore",
+            str(backup),
+            "--output",
+            str(output),
+            "--confirm",
+        ]
+    ) == 2
+    assert "already exists" in capsys.readouterr().err
+    assert output.read_text(encoding="utf-8") == "keep me"
