@@ -85,3 +85,27 @@ def verify_backup(
         application_count=len(applications),
         sha256=digest,
     )
+
+
+def restore_backup(
+    backup: str | Path,
+    destination: str | Path,
+    *,
+    confirmed: bool = False,
+) -> BackupSummary:
+    """Restore a validated backup only to a new, explicitly confirmed path."""
+
+    if not confirmed:
+        raise StorageError("Restore requires explicit confirmation")
+
+    source = Path(backup)
+    target = Path(destination)
+    _require_source(source)
+    _require_new_destination(source, target)
+    applications = ApplicationStore(source).load()
+    ApplicationStore(target).save(applications)
+    return BackupSummary(
+        path=target,
+        application_count=len(applications),
+        sha256=_digest(target),
+    )
