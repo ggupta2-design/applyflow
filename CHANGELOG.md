@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.0 — 2026-09-04
+
+- Added schema-validated, atomic backups that never overwrite files.
+- Added SHA-256 backup digests and optional expected-checksum verification.
+- Added constant-time checksum comparison and strict digest validation.
+- Added explicitly confirmed restores that only target new files.
+- Added value-free backup reports that omit application data and parent paths.
+- Added backup, verify-backup, and restore CLI commands.
+- Added backup integrity, recovery, CLI, and privacy tests.
+- Added recovery workflow documentation and security boundaries.
+
 ## 0.4.0 — 2026-09-03
 
 - Added read-only daily action plans for active applications.
