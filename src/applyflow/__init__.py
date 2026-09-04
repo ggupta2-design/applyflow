@@ -8,6 +8,7 @@ from .analytics import (
     find_stale_applications,
     summarize_pipeline,
 )
+from .backup import BackupSummary, create_backup, restore_backup, verify_backup
 from .models import Activity, Application, ApplicationError, ApplicationStatus
 from .planning import ActionItem, ActionKind, ActionPlan, build_action_plan
 from .service import (
@@ -34,19 +35,23 @@ __all__ = [
     "ApplicationError",
     "ApplicationStatus",
     "ApplicationStore",
+    "BackupSummary",
     "StorageError",
     "add_application_note",
     "application_timeline",
     "build_action_plan",
     "create_application",
+    "create_backup",
     "due_follow_ups",
     "find_stale_applications",
     "get_application",
     "list_applications",
     "recent_activity",
+    "restore_backup",
     "schedule_follow_up",
     "summarize_pipeline",
     "transition_application",
+    "verify_backup",
     "__version__",
 ]
-__version__ = "0.4.0"
+__version__ = "0.5.0"
