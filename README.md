@@ -11,7 +11,8 @@ The first release focuses on a safe application workflow:
 - build a prioritized daily action plan from follow-ups and stale records;
 - keep an append-only activity history and private manual notes;
 - review one timeline or bounded recent activity with notes hidden by default;
-- produce readable or JSON summaries for personal automation.
+- produce readable or JSON summaries for personal automation;
+- create, verify, and safely restore local backups without overwriting files.
 
 ## Privacy and safety
 
@@ -42,6 +43,8 @@ applyflow --data ~/private/applications.json note APPLICATION_ID --text "Portfol
 applyflow --data ~/private/applications.json history APPLICATION_ID
 applyflow --data ~/private/applications.json activity --since 2026-09-01 --limit 25
 applyflow --data ~/private/applications.json plan --as-of 2026-09-03 --json
+applyflow --data ~/private/applications.json backup ~/private/backups/applyflow.json
+applyflow verify-backup ~/private/backups/applyflow.json
 ```
 
 ApplyFlow supports saved, applied, interviewing, offer, rejected, and withdrawn
@@ -55,4 +58,4 @@ available with `--json` and omit source URLs and activity notes. The `history`
 and `activity` commands reveal notes only with an explicit `--include-notes`.
 
 See the [usage guide](docs/usage.md) and
-[privacy and safety guide](docs/privacy-and-safety.md), [analytics guide](docs/analytics.md), and [activity guide](docs/activity.md), and [daily planning guide](docs/daily-plans.md) for details.
+[privacy and safety guide](docs/privacy-and-safety.md), [analytics guide](docs/analytics.md), and [activity guide](docs/activity.md), and [daily planning guide](docs/daily-plans.md), and [backup guide](docs/backups.md) for details.
