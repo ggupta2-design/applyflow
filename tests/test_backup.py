@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from applyflow.backup import create_backup
+from applyflow.backup import create_backup, verify_backup
 from applyflow.models import Application
 from applyflow.storage import ApplicationStore, StorageError
 
@@ -65,3 +65,40 @@ def test_backup_rejects_malformed_source_before_writing(tmp_path):
         create_backup(ApplicationStore(source_path), destination)
 
     assert not destination.exists()
+
+
+def test_verifies_backup_and_expected_checksum(tmp_path):
+    source = _store(tmp_path / "applications.json")
+    backup = create_backup(source, tmp_path / "backup.json")
+
+    verified = verify_backup(
+        backup.path,
+        expected_sha256=backup.sha256.upper(),
+    )
+
+    assert verified == backup
+
+
+def test_detects_checksum_mismatch(tmp_path):
+    source = _store(tmp_path / "applications.json")
+    backup = create_backup(source, tmp_path / "backup.json")
+
+    with pytest.raises(StorageError, match="does not match"):
+        verify_backup(backup.path, expected_sha256="0" * 64)
+
+
+@pytest.mark.parametrize("digest", ["", "abc", "g" * 64])
+def test_rejects_invalid_expected_checksums(tmp_path, digest):
+    source = _store(tmp_path / "applications.json")
+    backup = create_backup(source, tmp_path / "backup.json")
+
+    with pytest.raises(StorageError, match="64-character hexadecimal"):
+        verify_backup(backup.path, expected_sha256=digest)
+
+
+def test_verification_rejects_invalid_backup_schema(tmp_path):
+    path = tmp_path / "backup.json"
+    path.write_text('{"schema_version": 99, "applications": []}', encoding="utf-8")
+
+    with pytest.raises(StorageError, match="Unsupported"):
+        verify_backup(path)
