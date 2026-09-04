@@ -10,10 +10,12 @@ from typing import Sequence
 
 from .activity import recent_activity
 from .analytics import find_stale_applications, summarize_pipeline
+from .backup import create_backup, verify_backup
 from .models import ApplicationError, ApplicationStatus
 from .planning import build_action_plan
 from .report import (
     format_action_plan,
+    format_backup_summary,
     format_applications,
     format_due_follow_ups,
     format_pipeline,
@@ -113,6 +115,21 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--inactive-days", type=int, default=14)
     plan.add_argument("--limit", type=int, default=25)
     plan.add_argument("--json", action="store_true", dest="as_json")
+
+    backup = commands.add_parser(
+        "backup",
+        help="create a validated backup without overwriting files",
+    )
+    backup.add_argument("output", type=Path)
+    backup.add_argument("--json", action="store_true", dest="as_json")
+
+    verify = commands.add_parser(
+        "verify-backup",
+        help="validate a backup and optionally check its SHA-256",
+    )
+    verify.add_argument("backup", type=Path)
+    verify.add_argument("--sha256")
+    verify.add_argument("--json", action="store_true", dest="as_json")
 
     pipeline = commands.add_parser(
         "pipeline",
@@ -233,6 +250,31 @@ def run(argv: Sequence[str] | None = None) -> int:
             )
             print(format_action_plan(plan, as_json=args.as_json))
             return 0 if not plan.items else 1
+
+        if args.command == "backup":
+            summary = create_backup(store, args.output)
+            print(
+                format_backup_summary(
+                    summary,
+                    action="created",
+                    as_json=args.as_json,
+                )
+            )
+            return 0
+
+        if args.command == "verify-backup":
+            summary = verify_backup(
+                args.backup,
+                expected_sha256=args.sha256,
+            )
+            print(
+                format_backup_summary(
+                    summary,
+                    action="verified",
+                    as_json=args.as_json,
+                )
+            )
+            return 0
 
         if args.command == "pipeline":
             summary = summarize_pipeline(store.load())
