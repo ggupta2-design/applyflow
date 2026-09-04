@@ -8,6 +8,7 @@ from typing import Iterable
 
 from .activity import ActivityRecord, application_timeline
 from .analytics import PipelineSummary, StaleApplication
+from .backup import BackupSummary
 from .models import Application
 from .planning import ActionKind, ActionPlan
 
@@ -321,3 +322,30 @@ def format_action_plan(plan: ActionPlan, *, as_json: bool = False) -> str:
             f"{application.role} | {reason}"
         )
     return "\n".join(lines)
+
+
+def format_backup_summary(
+    summary: BackupSummary,
+    *,
+    action: str,
+    as_json: bool = False,
+) -> str:
+    """Format value-free backup metadata without revealing parent directories."""
+
+    payload = {
+        "action": action,
+        "file": summary.path.name,
+        "application_count": summary.application_count,
+        "sha256": summary.sha256,
+    }
+    if as_json:
+        return json.dumps(payload, indent=2, sort_keys=True)
+
+    return "\n".join(
+        (
+            f"Backup {action}",
+            f"File: {summary.path.name}",
+            f"Applications: {summary.application_count}",
+            f"SHA-256: {summary.sha256}",
+        )
+    )
