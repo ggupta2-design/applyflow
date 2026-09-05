@@ -593,3 +593,20 @@ def test_week_command_reports_aggregate_progress(tmp_path, capsys):
     assert "Example" not in output
     assert "Analyst" not in output
     assert "app-1" not in output
+
+
+def test_week_command_rejects_invalid_submission_target(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+
+    assert run(
+        [
+            "--data",
+            str(data),
+            "week",
+            "--ending",
+            "2026-09-05",
+            "--target-submissions",
+            "0",
+        ]
+    ) == 2
+    assert "positive integer" in capsys.readouterr().err
