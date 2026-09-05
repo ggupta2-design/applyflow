@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.0 — 2026-09-05
+
+- Added inclusive seven-day application progress reviews.
+- Added deduplicated submission, interview, offer, and closure metrics.
+- Added weekly activity and active-pipeline counts.
+- Added overdue and next-seven-day follow-up workload totals.
+- Added configurable weekly submission goals and progress tracking.
+- Added count-only readable and JSON reports with no application identifiers.
+- Added the week CLI command and positive-target validation.
+- Added weekly review tests, workflow documentation, and privacy guidance.
+
 ## 0.5.0 — 2026-09-04
 
 - Added schema-validated, atomic backups that never overwrite files.
