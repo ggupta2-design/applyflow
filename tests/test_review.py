@@ -1,5 +1,7 @@
 from datetime import date, datetime, timezone
 
+import pytest
+
 from applyflow.models import Activity, Application, ApplicationStatus
 from applyflow.review import build_weekly_review
 
@@ -149,3 +151,60 @@ def test_terminal_follow_ups_are_not_counted():
 
     assert review.overdue_follow_ups == 0
     assert review.follow_ups_next_7_days == 0
+
+
+def test_measures_submission_goal_progress():
+    records = tuple(
+        Application(
+            id=f"app-{index}",
+            company=f"Company {index}",
+            role="Analyst",
+            status=ApplicationStatus.APPLIED,
+            applied_on=date(2026, 9, index + 1),
+            created_at=_at(index + 1),
+            updated_at=_at(index + 1),
+        )
+        for index in range(3)
+    )
+
+    review = build_weekly_review(
+        records,
+        ending_on=ENDING,
+        target_submissions=4,
+    )
+
+    assert review.submitted == 3
+    assert review.target_submissions == 4
+    assert review.remaining_to_target == 1
+    assert review.target_progress_percent == 75.0
+
+
+def test_caps_remaining_goal_at_zero():
+    application = Application(
+        id="app-1",
+        company="Example",
+        role="Analyst",
+        status=ApplicationStatus.APPLIED,
+        applied_on=ENDING,
+        created_at=_at(5),
+        updated_at=_at(5),
+    )
+
+    review = build_weekly_review(
+        (application,),
+        ending_on=ENDING,
+        target_submissions=1,
+    )
+
+    assert review.remaining_to_target == 0
+    assert review.target_progress_percent == 100.0
+
+
+@pytest.mark.parametrize("target", [0, -1, False])
+def test_rejects_invalid_submission_targets(target):
+    with pytest.raises(ValueError, match="positive integer"):
+        build_weekly_review(
+            (),
+            ending_on=ENDING,
+            target_submissions=target,
+        )
