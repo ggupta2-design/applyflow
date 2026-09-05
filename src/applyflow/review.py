@@ -23,6 +23,8 @@ class WeeklyReview:
     offers: int
     closed: int
     activity_count: int
+    overdue_follow_ups: int
+    follow_ups_next_7_days: int
 
 
 _TERMINAL = {ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN}
@@ -102,6 +104,18 @@ def build_weekly_review(
                 starts_on=starts_on,
                 ends_on=ending_on,
             )
+            for item in records
+        ),
+        overdue_follow_ups=sum(
+            item.status not in _TERMINAL
+            and item.follow_up_on is not None
+            and item.follow_up_on <= ending_on
+            for item in records
+        ),
+        follow_ups_next_7_days=sum(
+            item.status not in _TERMINAL
+            and item.follow_up_on is not None
+            and ending_on < item.follow_up_on <= ending_on + timedelta(days=7)
             for item in records
         ),
         activity_count=sum(
