@@ -93,3 +93,59 @@ def test_excludes_milestones_outside_week():
     assert review.closed == 0
     assert review.activity_count == 0
     assert review.active_records == 0
+
+
+def test_counts_overdue_and_next_week_follow_ups():
+    timestamp = _at(1)
+    records = (
+        Application(
+            id="overdue",
+            company="One",
+            role="Analyst",
+            status=ApplicationStatus.APPLIED,
+            follow_up_on=date(2026, 9, 4),
+            created_at=timestamp,
+            updated_at=timestamp,
+        ),
+        Application(
+            id="upcoming",
+            company="Two",
+            role="Engineer",
+            status=ApplicationStatus.INTERVIEWING,
+            follow_up_on=date(2026, 9, 12),
+            created_at=timestamp,
+            updated_at=timestamp,
+        ),
+        Application(
+            id="outside",
+            company="Three",
+            role="Designer",
+            status=ApplicationStatus.APPLIED,
+            follow_up_on=date(2026, 9, 13),
+            created_at=timestamp,
+            updated_at=timestamp,
+        ),
+    )
+
+    review = build_weekly_review(records, ending_on=ENDING)
+
+    assert review.overdue_follow_ups == 1
+    assert review.follow_ups_next_7_days == 1
+
+
+def test_terminal_follow_ups_are_not_counted():
+    timestamp = _at(1)
+    application = Application(
+        id="closed",
+        company="Example",
+        role="Analyst",
+        status=ApplicationStatus.REJECTED,
+        follow_up_on=ENDING,
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+
+    review = build_weekly_review((application,), ending_on=ENDING)
+
+    assert review.overdue_follow_ups == 0
+    assert review.follow_ups_next_7_days == 0
