@@ -14,7 +14,8 @@ documents, or private recruiter messages in notes.
 ApplyFlow's default summaries, timelines, recent-activity reports, and daily
 plans omit source URLs and activity notes to reduce accidental disclosure. Timeline commands
 include note text only after the explicit `--include-notes` option. Company names, role names, dates, and local record IDs
-still appear in reports.
+still appear in record-level reports. Weekly reviews are stricter and expose only
+aggregate counts for the selected time window.
 
 ## Storage safeguards
 
@@ -29,6 +30,7 @@ still appear in reports.
 - Daily plans are read-only, bounded, deduplicated, and never include note text.
 - Backups are schema-validated, written atomically, and never overwrite files.
 - Restore operations require confirmation and only write to a new destination.
+- Weekly reviews expose aggregate counts only and never identify applications.
 
 Atomic replacement helps prevent partial writes. ApplyFlow backups provide local
 recovery and SHA-256 change detection, but they are not encryption or proof of
