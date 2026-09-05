@@ -155,3 +155,20 @@ Backup and restore operations refuse to overwrite files. Reports contain only
 value-free metadata and omit parent directories. See
 [backups.md](backups.md) for the complete recovery workflow and security
 boundaries.
+
+
+## Review weekly progress
+
+Summarize a seven-day window and compare submissions with a weekly goal:
+
+```bash
+applyflow --data ~/private/applications.json week \
+  --ending 2026-09-05 \
+  --target-submissions 5 \
+  --json
+```
+
+The report includes aggregate milestone, activity, pipeline, and follow-up
+counts. It never lists individual application details and does not change the
+store. See [weekly-reviews.md](weekly-reviews.md) for metric definitions and
+privacy guidance.
