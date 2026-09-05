@@ -25,6 +25,9 @@ class WeeklyReview:
     activity_count: int
     overdue_follow_ups: int
     follow_ups_next_7_days: int
+    target_submissions: int
+    remaining_to_target: int
+    target_progress_percent: float
 
 
 _TERMINAL = {ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN}
@@ -52,11 +55,28 @@ def build_weekly_review(
     applications: Iterable[Application],
     *,
     ending_on: date,
+    target_submissions: int = 5,
 ) -> WeeklyReview:
     """Summarize progress without changing or exposing individual records."""
 
+    if isinstance(target_submissions, bool) or target_submissions < 1:
+        raise ValueError("target_submissions must be a positive integer")
+
     records = tuple(applications)
     starts_on = ending_on - timedelta(days=6)
+    submitted = sum(
+        (
+            item.applied_on is not None
+            and _in_window(item.applied_on, starts_on, ending_on)
+        )
+        or _reached_in_window(
+            item,
+            {ApplicationStatus.APPLIED},
+            starts_on=starts_on,
+            ends_on=ending_on,
+        )
+        for item in records
+    )
     return WeeklyReview(
         starts_on=starts_on,
         ends_on=ending_on,
@@ -66,19 +86,7 @@ def build_weekly_review(
             _in_window(item.created_at.date(), starts_on, ending_on)
             for item in records
         ),
-        submitted=sum(
-            (
-                item.applied_on is not None
-                and _in_window(item.applied_on, starts_on, ending_on)
-            )
-            or _reached_in_window(
-                item,
-                {ApplicationStatus.APPLIED},
-                starts_on=starts_on,
-                ends_on=ending_on,
-            )
-            for item in records
-        ),
+        submitted=submitted,
         interviewed=sum(
             _reached_in_window(
                 item,
@@ -118,6 +126,9 @@ def build_weekly_review(
             and ending_on < item.follow_up_on <= ending_on + timedelta(days=7)
             for item in records
         ),
+        target_submissions=target_submissions,
+        remaining_to_target=max(target_submissions - submitted, 0),
+        target_progress_percent=submitted / target_submissions * 100,
         activity_count=sum(
             _in_window(activity.at.date(), starts_on, ending_on)
             for item in records
