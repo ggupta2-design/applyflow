@@ -22,7 +22,9 @@ from .report import (
     format_recent_activity,
     format_stale_applications,
     format_timeline,
+    format_weekly_review,
 )
+from .review import build_weekly_review
 from .service import (
     add_application_note,
     create_application,
@@ -139,6 +141,14 @@ def build_parser() -> argparse.ArgumentParser:
     restore.add_argument("--output", type=Path, required=True)
     restore.add_argument("--confirm", action="store_true")
     restore.add_argument("--json", action="store_true", dest="as_json")
+
+    week = commands.add_parser(
+        "week",
+        help="summarize a seven-day application progress window",
+    )
+    week.add_argument("--ending", type=_date, default=date.today())
+    week.add_argument("--target-submissions", type=int, default=5)
+    week.add_argument("--json", action="store_true", dest="as_json")
 
     pipeline = commands.add_parser(
         "pipeline",
@@ -298,6 +308,15 @@ def run(argv: Sequence[str] | None = None) -> int:
                     as_json=args.as_json,
                 )
             )
+            return 0
+
+        if args.command == "week":
+            review = build_weekly_review(
+                store.load(),
+                ending_on=args.ending,
+                target_submissions=args.target_submissions,
+            )
+            print(format_weekly_review(review, as_json=args.as_json))
             return 0
 
         if args.command == "pipeline":
