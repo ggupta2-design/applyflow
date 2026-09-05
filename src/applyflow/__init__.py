@@ -11,6 +11,7 @@ from .analytics import (
 from .backup import BackupSummary, create_backup, restore_backup, verify_backup
 from .models import Activity, Application, ApplicationError, ApplicationStatus
 from .planning import ActionItem, ActionKind, ActionPlan, build_action_plan
+from .review import WeeklyReview, build_weekly_review
 from .service import (
     add_application_note,
     create_application,
@@ -31,6 +32,7 @@ __all__ = [
     "PipelineSummary",
     "StaleApplication",
     "StatusCount",
+    "WeeklyReview",
     "Application",
     "ApplicationError",
     "ApplicationStatus",
@@ -40,6 +42,7 @@ __all__ = [
     "add_application_note",
     "application_timeline",
     "build_action_plan",
+    "build_weekly_review",
     "create_application",
     "create_backup",
     "due_follow_ups",
@@ -54,4 +57,4 @@ __all__ = [
     "verify_backup",
     "__version__",
 ]
-__version__ = "0.5.0"
+__version__ = "0.6.0"
