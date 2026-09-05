@@ -1,0 +1,95 @@
+from datetime import date, datetime, timezone
+
+from applyflow.models import Activity, Application, ApplicationStatus
+from applyflow.review import build_weekly_review
+
+
+ENDING = date(2026, 9, 5)
+
+
+def _at(day: int) -> datetime:
+    return datetime(2026, 9, day, 12, tzinfo=timezone.utc)
+
+
+def test_summarizes_weekly_milestones_once_per_application():
+    application = Application(
+        id="progress",
+        company="Example",
+        role="Analyst",
+        status=ApplicationStatus.OFFER,
+        applied_on=date(2026, 9, 1),
+        created_at=_at(1),
+        updated_at=_at(4),
+        history=(
+            Activity(at=_at(1), status=ApplicationStatus.APPLIED),
+            Activity(at=_at(2), status=ApplicationStatus.INTERVIEWING),
+            Activity(at=_at(3), status=ApplicationStatus.INTERVIEWING),
+            Activity(at=_at(4), status=ApplicationStatus.OFFER),
+        ),
+    )
+
+    review = build_weekly_review((application,), ending_on=ENDING)
+
+    assert review.starts_on == date(2026, 8, 30)
+    assert review.ends_on == ENDING
+    assert review.total_records == 1
+    assert review.active_records == 1
+    assert review.created == 1
+    assert review.submitted == 1
+    assert review.interviewed == 1
+    assert review.offers == 1
+    assert review.closed == 0
+    assert review.activity_count == 4
+
+
+def test_weekly_window_is_inclusive_at_both_boundaries():
+    starts_on = datetime(2026, 8, 30, 23, tzinfo=timezone.utc)
+    ends_on = datetime(2026, 9, 5, 23, tzinfo=timezone.utc)
+    records = (
+        Application(
+            id="start",
+            company="One",
+            role="Analyst",
+            created_at=starts_on,
+            updated_at=starts_on,
+            history=(Activity(at=starts_on, status=ApplicationStatus.SAVED),),
+        ),
+        Application(
+            id="end",
+            company="Two",
+            role="Engineer",
+            created_at=ends_on,
+            updated_at=ends_on,
+            history=(Activity(at=ends_on, status=ApplicationStatus.SAVED),),
+        ),
+    )
+
+    review = build_weekly_review(records, ending_on=ENDING)
+
+    assert review.created == 2
+    assert review.activity_count == 2
+
+
+def test_excludes_milestones_outside_week():
+    before = datetime(2026, 8, 29, tzinfo=timezone.utc)
+    application = Application(
+        id="old",
+        company="Example",
+        role="Analyst",
+        status=ApplicationStatus.REJECTED,
+        applied_on=date(2026, 8, 29),
+        created_at=before,
+        updated_at=before,
+        history=(
+            Activity(at=before, status=ApplicationStatus.APPLIED),
+            Activity(at=before, status=ApplicationStatus.REJECTED),
+        ),
+    )
+
+    review = build_weekly_review((application,), ending_on=ENDING)
+
+    assert review.created == 0
+    assert review.submitted == 0
+    assert review.closed == 0
+    assert review.activity_count == 0
+    assert review.active_records == 0
