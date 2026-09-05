@@ -2,6 +2,7 @@ import json
 from datetime import datetime, timezone
 
 from applyflow.cli import run
+from applyflow.models import ApplicationStatus
 from applyflow.service import create_application
 from applyflow.storage import ApplicationStore
 
@@ -557,3 +558,38 @@ def test_restore_command_never_replaces_existing_output(tmp_path, capsys):
     ) == 2
     assert "already exists" in capsys.readouterr().err
     assert output.read_text(encoding="utf-8") == "keep me"
+
+
+def test_week_command_reports_aggregate_progress(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+    create_application(
+        ApplicationStore(data),
+        company="Example",
+        role="Analyst",
+        status=ApplicationStatus.APPLIED,
+        application_id="app-1",
+        now=datetime(2026, 9, 2, tzinfo=timezone.utc),
+    )
+
+    assert run(
+        [
+            "--data",
+            str(data),
+            "week",
+            "--ending",
+            "2026-09-05",
+            "--target-submissions",
+            "4",
+            "--json",
+        ]
+    ) == 0
+    output = capsys.readouterr().out
+    payload = json.loads(output)
+
+    assert payload["starts_on"] == "2026-08-30"
+    assert payload["ends_on"] == "2026-09-05"
+    assert payload["submitted"] == 1
+    assert payload["remaining_to_target"] == 3
+    assert "Example" not in output
+    assert "Analyst" not in output
+    assert "app-1" not in output
