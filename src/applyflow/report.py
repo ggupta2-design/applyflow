@@ -11,6 +11,7 @@ from .analytics import PipelineSummary, StaleApplication
 from .backup import BackupSummary
 from .models import Application
 from .planning import ActionKind, ActionPlan
+from .review import WeeklyReview
 
 
 def application_summary(application: Application) -> dict[str, object]:
@@ -347,5 +348,49 @@ def format_backup_summary(
             f"File: {summary.path.name}",
             f"Applications: {summary.application_count}",
             f"SHA-256: {summary.sha256}",
+        )
+    )
+
+
+def format_weekly_review(review: WeeklyReview, *, as_json: bool = False) -> str:
+    """Format count-only weekly progress without application identifiers."""
+
+    payload = {
+        "starts_on": review.starts_on.isoformat(),
+        "ends_on": review.ends_on.isoformat(),
+        "total_records": review.total_records,
+        "active_records": review.active_records,
+        "created": review.created,
+        "submitted": review.submitted,
+        "interviewed": review.interviewed,
+        "offers": review.offers,
+        "closed": review.closed,
+        "activity_count": review.activity_count,
+        "overdue_follow_ups": review.overdue_follow_ups,
+        "follow_ups_next_7_days": review.follow_ups_next_7_days,
+        "target_submissions": review.target_submissions,
+        "remaining_to_target": review.remaining_to_target,
+        "target_progress_percent": round(review.target_progress_percent, 1),
+    }
+    if as_json:
+        return json.dumps(payload, indent=2, sort_keys=True)
+
+    return "\n".join(
+        (
+            f"Weekly review: {review.starts_on.isoformat()} to {review.ends_on.isoformat()}",
+            f"Applications created: {review.created}",
+            f"Applications submitted: {review.submitted}",
+            f"Interviews reached: {review.interviewed}",
+            f"Offers reached: {review.offers}",
+            f"Applications closed: {review.closed}",
+            f"Recorded activities: {review.activity_count}",
+            f"Active pipeline: {review.active_records} of {review.total_records}",
+            f"Overdue follow-ups: {review.overdue_follow_ups}",
+            f"Follow-ups in next 7 days: {review.follow_ups_next_7_days}",
+            (
+                f"Submission goal: {review.submitted}/{review.target_submissions} "
+                f"({review.target_progress_percent:.1f}%)"
+            ),
+            f"Remaining to goal: {review.remaining_to_target}",
         )
     )
