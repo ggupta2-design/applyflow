@@ -10,6 +10,14 @@ from typing import Iterable
 from .models import Application, ApplicationStatus
 
 
+_TERMINAL = {ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN}
+_SUBMITTED = {
+    ApplicationStatus.APPLIED,
+    ApplicationStatus.INTERVIEWING,
+    ApplicationStatus.OFFER,
+}
+
+
 class AuditSeverity(str, Enum):
     """Machine-readable severity for an integrity finding."""
 
@@ -29,6 +37,9 @@ class AuditCode(str, Enum):
     ACTIVITY_OUTSIDE_RECORD_WINDOW = "activity_outside_record_window"
     FUTURE_TIMESTAMP = "future_timestamp"
     FUTURE_APPLIED_DATE = "future_applied_date"
+    MISSING_APPLIED_DATE = "missing_applied_date"
+    TERMINAL_FOLLOW_UP = "terminal_follow_up"
+    DUPLICATE_ACTIVE_OPPORTUNITY = "duplicate_active_opportunity"
 
 
 _ALLOWED_TRANSITIONS: dict[ApplicationStatus, frozenset[ApplicationStatus]] = {
@@ -180,6 +191,39 @@ def audit_applications(
                     AuditSeverity.WARNING,
                 )
             )
+        reached_submitted_stage = (
+            application.status in _SUBMITTED
+            or any(activity.status in _SUBMITTED for activity in application.history)
+        )
+        if reached_submitted_stage and application.applied_on is None:
+            findings.append(
+                AuditFinding(
+                    AuditCode.MISSING_APPLIED_DATE,
+                    AuditSeverity.ERROR,
+                )
+            )
+        if application.status in _TERMINAL and application.follow_up_on is not None:
+            findings.append(
+                AuditFinding(
+                    AuditCode.TERMINAL_FOLLOW_UP,
+                    AuditSeverity.ERROR,
+                )
+            )
+
+    seen_active: set[tuple[str, str]] = set()
+    for application in records:
+        if application.status in _TERMINAL:
+            continue
+        key = (application.company.casefold(), application.role.casefold())
+        if key in seen_active:
+            findings.append(
+                AuditFinding(
+                    AuditCode.DUPLICATE_ACTIVE_OPPORTUNITY,
+                    AuditSeverity.WARNING,
+                )
+            )
+        else:
+            seen_active.add(key)
 
     return AuditResult(
         as_of=as_of,
