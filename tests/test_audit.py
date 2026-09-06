@@ -226,3 +226,26 @@ def test_terminal_duplicates_do_not_trigger_active_duplicate_warning():
     result = audit_applications((first, second), as_of=date(2026, 9, 6))
 
     assert result.healthy is True
+
+
+def test_audit_counts_are_grouped_and_deterministic():
+    result = audit_applications(
+        (
+            application(id="first", applied_on=None),
+            application(id="second", applied_on=None),
+        ),
+        as_of=date(2026, 9, 6),
+    )
+
+    assert result.finding_count == 3
+    assert [
+        (item.code, item.severity, item.count)
+        for item in result.counts
+    ] == [
+        (AuditCode.MISSING_APPLIED_DATE, AuditSeverity.ERROR, 2),
+        (
+            AuditCode.DUPLICATE_ACTIVE_OPPORTUNITY,
+            AuditSeverity.WARNING,
+            1,
+        ),
+    ]
