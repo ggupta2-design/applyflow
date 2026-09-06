@@ -68,7 +68,8 @@ def test_update_cannot_precede_creation():
         as_of=date(2026, 9, 6),
     )
 
-    assert codes(result) == [AuditCode.UPDATED_BEFORE_CREATED]
+    assert AuditCode.UPDATED_BEFORE_CREATED in codes(result)
+    assert AuditCode.ACTIVITY_OUTSIDE_RECORD_WINDOW in codes(result)
 
 
 def test_illegal_status_jump_is_reported_once():
@@ -108,3 +109,53 @@ def test_same_status_note_activity_is_valid():
     )
 
     assert result.healthy is True
+
+
+def test_naive_timestamps_are_reported_without_comparison_errors():
+    naive = datetime(2026, 9, 6, 18, 0)
+    result = audit_applications(
+        (
+            application(
+                created_at=naive,
+                updated_at=naive,
+                history=(Activity(at=naive, status=ApplicationStatus.APPLIED),),
+            ),
+        ),
+        as_of=date(2026, 9, 6),
+    )
+
+    assert codes(result) == [AuditCode.TIMESTAMP_WITHOUT_TIMEZONE]
+
+
+def test_out_of_order_activity_is_detected():
+    later = datetime(2026, 9, 6, 20, 0, tzinfo=timezone.utc)
+    earlier = datetime(2026, 9, 6, 19, 0, tzinfo=timezone.utc)
+    result = audit_applications(
+        (
+            application(
+                updated_at=later,
+                history=(
+                    Activity(at=NOW, status=ApplicationStatus.APPLIED),
+                    Activity(at=later, status=ApplicationStatus.APPLIED),
+                    Activity(at=earlier, status=ApplicationStatus.APPLIED),
+                ),
+            ),
+        ),
+        as_of=date(2026, 9, 6),
+    )
+
+    assert codes(result) == [AuditCode.ACTIVITY_OUT_OF_ORDER]
+
+
+def test_future_record_and_application_dates_are_warnings():
+    result = audit_applications(
+        (application(applied_on=date(2026, 9, 7)),),
+        as_of=date(2026, 9, 5),
+    )
+
+    assert set(codes(result)) == {
+        AuditCode.FUTURE_APPLIED_DATE,
+        AuditCode.FUTURE_TIMESTAMP,
+    }
+    assert result.error_count == 0
+    assert result.warning_count == 2
