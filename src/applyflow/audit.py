@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 from datetime import date, datetime
 from enum import Enum
@@ -75,12 +76,36 @@ class AuditFinding:
 
 
 @dataclass(frozen=True)
+class FindingCount:
+    """Aggregate count for one stable finding code and severity."""
+
+    code: AuditCode
+    severity: AuditSeverity
+    count: int
+
+
+@dataclass(frozen=True)
 class AuditResult:
     """Aggregate audit result that never contains application values."""
 
     as_of: date
     records_checked: int
     findings: tuple[AuditFinding, ...]
+
+    @property
+    def finding_count(self) -> int:
+        return len(self.findings)
+
+    @property
+    def counts(self) -> tuple[FindingCount, ...]:
+        grouped = Counter((item.code, item.severity) for item in self.findings)
+        return tuple(
+            FindingCount(code=code, severity=severity, count=count)
+            for (code, severity), count in sorted(
+                grouped.items(),
+                key=lambda item: (item[0][1].value, item[0][0].value),
+            )
+        )
 
     @property
     def error_count(self) -> int:
