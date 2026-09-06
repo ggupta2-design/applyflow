@@ -7,7 +7,7 @@ from datetime import date
 from enum import Enum
 from typing import Iterable
 
-from .models import Application
+from .models import Application, ApplicationStatus
 
 
 class AuditSeverity(str, Enum):
@@ -23,6 +23,31 @@ class AuditCode(str, Enum):
     MISSING_HISTORY = "missing_history"
     STATUS_HISTORY_MISMATCH = "status_history_mismatch"
     UPDATED_BEFORE_CREATED = "updated_before_created"
+    INVALID_STATUS_TRANSITION = "invalid_status_transition"
+
+
+_ALLOWED_TRANSITIONS: dict[ApplicationStatus, frozenset[ApplicationStatus]] = {
+    ApplicationStatus.SAVED: frozenset(
+        {ApplicationStatus.APPLIED, ApplicationStatus.WITHDRAWN}
+    ),
+    ApplicationStatus.APPLIED: frozenset(
+        {
+            ApplicationStatus.INTERVIEWING,
+            ApplicationStatus.REJECTED,
+            ApplicationStatus.WITHDRAWN,
+        }
+    ),
+    ApplicationStatus.INTERVIEWING: frozenset(
+        {
+            ApplicationStatus.OFFER,
+            ApplicationStatus.REJECTED,
+            ApplicationStatus.WITHDRAWN,
+        }
+    ),
+    ApplicationStatus.OFFER: frozenset({ApplicationStatus.WITHDRAWN}),
+    ApplicationStatus.REJECTED: frozenset(),
+    ApplicationStatus.WITHDRAWN: frozenset(),
+}
 
 
 @dataclass(frozen=True)
@@ -75,6 +100,18 @@ def audit_applications(
                     AuditSeverity.ERROR,
                 )
             )
+        for previous, current in zip(application.history, application.history[1:]):
+            if (
+                current.status != previous.status
+                and current.status not in _ALLOWED_TRANSITIONS[previous.status]
+            ):
+                findings.append(
+                    AuditFinding(
+                        AuditCode.INVALID_STATUS_TRANSITION,
+                        AuditSeverity.ERROR,
+                    )
+                )
+                break
         if application.updated_at < application.created_at:
             findings.append(
                 AuditFinding(
