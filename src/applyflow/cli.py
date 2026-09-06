@@ -10,11 +10,13 @@ from typing import Sequence
 
 from .activity import recent_activity
 from .analytics import find_stale_applications, summarize_pipeline
+from .audit import audit_applications
 from .backup import create_backup, restore_backup, verify_backup
 from .models import ApplicationError, ApplicationStatus
 from .planning import build_action_plan
 from .report import (
     format_action_plan,
+    format_integrity_audit,
     format_backup_summary,
     format_applications,
     format_due_follow_ups,
@@ -149,6 +151,13 @@ def build_parser() -> argparse.ArgumentParser:
     week.add_argument("--ending", type=_date, default=date.today())
     week.add_argument("--target-submissions", type=int, default=5)
     week.add_argument("--json", action="store_true", dest="as_json")
+
+    audit = commands.add_parser(
+        "audit",
+        help="check semantic integrity without changing application data",
+    )
+    audit.add_argument("--as-of", type=_date, default=date.today())
+    audit.add_argument("--json", action="store_true", dest="as_json")
 
     pipeline = commands.add_parser(
         "pipeline",
@@ -318,6 +327,11 @@ def run(argv: Sequence[str] | None = None) -> int:
             )
             print(format_weekly_review(review, as_json=args.as_json))
             return 0
+
+        if args.command == "audit":
+            result = audit_applications(store.load(), as_of=args.as_of)
+            print(format_integrity_audit(result, as_json=args.as_json))
+            return 0 if result.healthy else 1
 
         if args.command == "pipeline":
             summary = summarize_pipeline(store.load())
