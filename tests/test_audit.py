@@ -69,3 +69,42 @@ def test_update_cannot_precede_creation():
     )
 
     assert codes(result) == [AuditCode.UPDATED_BEFORE_CREATED]
+
+
+def test_illegal_status_jump_is_reported_once():
+    history = (
+        Activity(at=NOW, status=ApplicationStatus.SAVED),
+        Activity(
+            at=datetime(2026, 9, 6, 19, 0, tzinfo=timezone.utc),
+            status=ApplicationStatus.OFFER,
+        ),
+    )
+    result = audit_applications(
+        (
+            application(
+                status=ApplicationStatus.OFFER,
+                updated_at=history[-1].at,
+                history=history,
+            ),
+        ),
+        as_of=date(2026, 9, 6),
+    )
+
+    assert codes(result) == [AuditCode.INVALID_STATUS_TRANSITION]
+
+
+def test_same_status_note_activity_is_valid():
+    history = (
+        Activity(at=NOW, status=ApplicationStatus.APPLIED),
+        Activity(
+            at=datetime(2026, 9, 6, 19, 0, tzinfo=timezone.utc),
+            status=ApplicationStatus.APPLIED,
+            note="Private note",
+        ),
+    )
+    result = audit_applications(
+        (application(updated_at=history[-1].at, history=history),),
+        as_of=date(2026, 9, 6),
+    )
+
+    assert result.healthy is True
