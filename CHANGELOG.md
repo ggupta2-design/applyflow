@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0 — 2026-09-06
+
+- Added read-only semantic integrity audits for local application stores.
+- Added lifecycle, history, timestamp, applied-date, and follow-up consistency checks.
+- Added duplicate active-opportunity and future-date warnings.
+- Added timezone-awareness and chronological activity safeguards.
+- Added stable finding codes, severity levels, and deterministic aggregate counts.
+- Added privacy-safe readable and JSON reports with no application values.
+- Added the audit CLI command with automation-friendly exit statuses.
+- Added integrity tests, usage documentation, and explicit safety boundaries.
+
 ## 0.6.0 — 2026-09-05
 
 - Added inclusive seven-day application progress reviews.
