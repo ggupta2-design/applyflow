@@ -1,8 +1,8 @@
 import json
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from applyflow.cli import run
-from applyflow.models import ApplicationStatus
+from applyflow.models import Application, ApplicationStatus
 from applyflow.service import create_application
 from applyflow.storage import ApplicationStore
 
@@ -610,3 +610,51 @@ def test_week_command_rejects_invalid_submission_target(tmp_path, capsys):
         ]
     ) == 2
     assert "positive integer" in capsys.readouterr().err
+
+
+def test_audit_command_returns_zero_for_healthy_store(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+    create_application(
+        ApplicationStore(data),
+        company="Example",
+        role="Analyst",
+        application_id="app-1",
+        now=datetime(2026, 9, 6, tzinfo=timezone.utc),
+    )
+
+    assert run(
+        ["--data", str(data), "audit", "--as-of", "2026-09-06", "--json"]
+    ) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["healthy"] is True
+    assert payload["records_checked"] == 1
+
+
+def test_audit_command_reports_issues_without_exposing_values(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+    now = datetime(2026, 9, 6, tzinfo=timezone.utc)
+    ApplicationStore(data).save(
+        (
+            Application(
+                id="private-id",
+                company="Sensitive Company",
+                role="Confidential Role",
+                status=ApplicationStatus.APPLIED,
+                applied_on=None,
+                created_at=now,
+                updated_at=now,
+                history=(),
+            ),
+        )
+    )
+
+    assert run(
+        ["--data", str(data), "audit", "--as-of", "2026-09-06", "--json"]
+    ) == 1
+    output = capsys.readouterr().out
+    payload = json.loads(output)
+    assert payload["error_count"] == 2
+    assert payload["healthy"] is False
+    assert "Sensitive Company" not in output
+    assert "Confidential Role" not in output
+    assert "private-id" not in output
