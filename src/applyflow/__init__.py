@@ -1,6 +1,14 @@
 """Local-first job application workflow automation."""
 
 from .activity import ActivityRecord, application_timeline, recent_activity
+from .audit import (
+    AuditCode,
+    AuditFinding,
+    AuditResult,
+    AuditSeverity,
+    FindingCount,
+    audit_applications,
+)
 from .analytics import (
     PipelineSummary,
     StaleApplication,
@@ -29,6 +37,11 @@ __all__ = [
     "ActionItem",
     "ActionKind",
     "ActionPlan",
+    "AuditCode",
+    "AuditFinding",
+    "AuditResult",
+    "AuditSeverity",
+    "FindingCount",
     "PipelineSummary",
     "StaleApplication",
     "StatusCount",
@@ -41,6 +54,7 @@ __all__ = [
     "StorageError",
     "add_application_note",
     "application_timeline",
+    "audit_applications",
     "build_action_plan",
     "build_weekly_review",
     "create_application",
@@ -57,4 +71,4 @@ __all__ = [
     "verify_backup",
     "__version__",
 ]
-__version__ = "0.6.0"
+__version__ = "0.7.0"
