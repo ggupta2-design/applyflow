@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 from typing import Iterable
 
@@ -24,6 +24,11 @@ class AuditCode(str, Enum):
     STATUS_HISTORY_MISMATCH = "status_history_mismatch"
     UPDATED_BEFORE_CREATED = "updated_before_created"
     INVALID_STATUS_TRANSITION = "invalid_status_transition"
+    TIMESTAMP_WITHOUT_TIMEZONE = "timestamp_without_timezone"
+    ACTIVITY_OUT_OF_ORDER = "activity_out_of_order"
+    ACTIVITY_OUTSIDE_RECORD_WINDOW = "activity_outside_record_window"
+    FUTURE_TIMESTAMP = "future_timestamp"
+    FUTURE_APPLIED_DATE = "future_applied_date"
 
 
 _ALLOWED_TRANSITIONS: dict[ApplicationStatus, frozenset[ApplicationStatus]] = {
@@ -79,6 +84,10 @@ class AuditResult:
         return not self.findings
 
 
+def _is_aware(value: datetime) -> bool:
+    return value.tzinfo is not None and value.utcoffset() is not None
+
+
 def audit_applications(
     applications: Iterable[Application],
     *,
@@ -112,11 +121,63 @@ def audit_applications(
                     )
                 )
                 break
-        if application.updated_at < application.created_at:
+        timestamps = (
+            application.created_at,
+            application.updated_at,
+            *(activity.at for activity in application.history),
+        )
+        timestamps_are_aware = all(_is_aware(value) for value in timestamps)
+        if not timestamps_are_aware:
             findings.append(
                 AuditFinding(
-                    AuditCode.UPDATED_BEFORE_CREATED,
+                    AuditCode.TIMESTAMP_WITHOUT_TIMEZONE,
                     AuditSeverity.ERROR,
+                )
+            )
+        else:
+            if application.updated_at < application.created_at:
+                findings.append(
+                    AuditFinding(
+                        AuditCode.UPDATED_BEFORE_CREATED,
+                        AuditSeverity.ERROR,
+                    )
+                )
+            if any(
+                current.at < previous.at
+                for previous, current in zip(
+                    application.history,
+                    application.history[1:],
+                )
+            ):
+                findings.append(
+                    AuditFinding(
+                        AuditCode.ACTIVITY_OUT_OF_ORDER,
+                        AuditSeverity.ERROR,
+                    )
+                )
+            if any(
+                activity.at < application.created_at
+                or activity.at > application.updated_at
+                for activity in application.history
+            ):
+                findings.append(
+                    AuditFinding(
+                        AuditCode.ACTIVITY_OUTSIDE_RECORD_WINDOW,
+                        AuditSeverity.ERROR,
+                    )
+                )
+            if any(value.date() > as_of for value in timestamps):
+                findings.append(
+                    AuditFinding(
+                        AuditCode.FUTURE_TIMESTAMP,
+                        AuditSeverity.WARNING,
+                    )
+                )
+        if application.applied_on is not None and application.applied_on > as_of:
+            findings.append(
+                AuditFinding(
+                    AuditCode.FUTURE_APPLIED_DATE,
+                    AuditSeverity.WARNING,
                 )
             )
 
