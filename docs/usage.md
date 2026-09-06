@@ -172,3 +172,18 @@ The report includes aggregate milestone, activity, pipeline, and follow-up
 counts. It never lists individual application details and does not change the
 store. See [weekly-reviews.md](weekly-reviews.md) for metric definitions and
 privacy guidance.
+
+
+## Audit local data integrity
+
+Check relationships that JSON schema validation alone cannot verify:
+
+```bash
+applyflow --data ~/private/applications.json audit --as-of 2026-09-06
+applyflow --data ~/private/applications.json audit --as-of 2026-09-06 --json
+```
+
+The audit is read-only and returns status 1 when warnings or errors need manual
+review. Its reports contain aggregate finding counts only; they never include
+application IDs, companies, roles, URLs, or notes. See
+[integrity-audits.md](integrity-audits.md) for every check and exit status.
