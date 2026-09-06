@@ -43,3 +43,16 @@ Status changes must follow the supported application lifecycle. Terminal
 rejected and withdrawn records cannot receive new follow-ups. ApplyFlow only
 reports due follow-ups; it never contacts a recruiter or submits an application.
 Review every external action yourself.
+
+
+## Integrity audit safety
+
+Integrity audits are read-only and produce value-free aggregates. Finding
+objects do not retain record identifiers, and reports omit company names,
+roles, source URLs, individual dates, and notes. This makes JSON output safer
+for logs and local automation, though users should still protect the underlying
+store.
+
+An audit is diagnostic, not a repair operation. It does not rewrite records,
+clear follow-ups, reorder history, merge duplicates, or contact anyone. Back up
+the store, review each reported category, and make corrections deliberately.
