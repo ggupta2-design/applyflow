@@ -1,5 +1,5 @@
 import json
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 
 from applyflow.cli import run
 from applyflow.models import Application, ApplicationStatus
@@ -658,3 +658,22 @@ def test_audit_command_reports_issues_without_exposing_values(tmp_path, capsys):
     assert "Sensitive Company" not in output
     assert "Confidential Role" not in output
     assert "private-id" not in output
+
+
+def test_audit_command_returns_review_status_for_warnings(tmp_path, capsys):
+    data = tmp_path / "applications.json"
+    create_application(
+        ApplicationStore(data),
+        company="Future Example",
+        role="Analyst",
+        application_id="future",
+        now=datetime(2026, 9, 7, tzinfo=timezone.utc),
+    )
+
+    assert run(
+        ["--data", str(data), "audit", "--as-of", "2026-09-06", "--json"]
+    ) == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["error_count"] == 0
+    assert payload["warning_count"] == 1
+    assert payload["findings"][0]["code"] == "future_timestamp"
