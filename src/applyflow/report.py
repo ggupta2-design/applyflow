@@ -8,6 +8,7 @@ from typing import Iterable
 
 from .activity import ActivityRecord, application_timeline
 from .analytics import PipelineSummary, StaleApplication
+from .audit import AuditResult
 from .backup import BackupSummary
 from .models import Application
 from .planning import ActionKind, ActionPlan
@@ -394,3 +395,49 @@ def format_weekly_review(review: WeeklyReview, *, as_json: bool = False) -> str:
             f"Remaining to goal: {review.remaining_to_target}",
         )
     )
+
+
+def format_integrity_audit(
+    result: AuditResult,
+    *,
+    as_json: bool = False,
+) -> str:
+    """Format count-only integrity findings without application values."""
+
+    findings = [
+        {
+            "code": item.code.value,
+            "severity": item.severity.value,
+            "count": item.count,
+        }
+        for item in result.counts
+    ]
+    payload = {
+        "as_of": result.as_of.isoformat(),
+        "records_checked": result.records_checked,
+        "healthy": result.healthy,
+        "finding_count": result.finding_count,
+        "error_count": result.error_count,
+        "warning_count": result.warning_count,
+        "findings": findings,
+    }
+    if as_json:
+        return json.dumps(payload, indent=2, sort_keys=True)
+
+    lines = [
+        "Application data integrity audit",
+        f"As of: {result.as_of.isoformat()}",
+        f"Records checked: {result.records_checked}",
+        f"Status: {'healthy' if result.healthy else 'issues detected'}",
+        f"Errors: {result.error_count}",
+        f"Warnings: {result.warning_count}",
+    ]
+    if not findings:
+        lines.append("Findings: none")
+    else:
+        lines.append("Findings:")
+        lines.extend(
+            f"- {item['code']}: {item['count']} ({item['severity']})"
+            for item in findings
+        )
+    return "\n".join(lines)
