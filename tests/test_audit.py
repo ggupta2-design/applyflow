@@ -159,3 +159,70 @@ def test_future_record_and_application_dates_are_warnings():
     }
     assert result.error_count == 0
     assert result.warning_count == 2
+
+
+def test_submitted_records_require_an_applied_date():
+    result = audit_applications(
+        (application(applied_on=None),),
+        as_of=date(2026, 9, 6),
+    )
+
+    assert codes(result) == [AuditCode.MISSING_APPLIED_DATE]
+
+
+def test_terminal_records_cannot_keep_follow_ups():
+    closed_at = datetime(2026, 9, 6, 19, 0, tzinfo=timezone.utc)
+    history = (
+        Activity(at=NOW, status=ApplicationStatus.APPLIED),
+        Activity(at=closed_at, status=ApplicationStatus.REJECTED),
+    )
+    result = audit_applications(
+        (
+            application(
+                status=ApplicationStatus.REJECTED,
+                follow_up_on=date(2026, 9, 8),
+                updated_at=closed_at,
+                history=history,
+            ),
+        ),
+        as_of=date(2026, 9, 6),
+    )
+
+    assert codes(result) == [AuditCode.TERMINAL_FOLLOW_UP]
+
+
+def test_duplicate_active_opportunities_are_warnings():
+    result = audit_applications(
+        (
+            application(id="first"),
+            application(id="second"),
+        ),
+        as_of=date(2026, 9, 6),
+    )
+
+    assert codes(result) == [AuditCode.DUPLICATE_ACTIVE_OPPORTUNITY]
+    assert result.warning_count == 1
+
+
+def test_terminal_duplicates_do_not_trigger_active_duplicate_warning():
+    closed_at = datetime(2026, 9, 6, 19, 0, tzinfo=timezone.utc)
+    history = (
+        Activity(at=NOW, status=ApplicationStatus.APPLIED),
+        Activity(at=closed_at, status=ApplicationStatus.REJECTED),
+    )
+    first = application(
+        id="first",
+        status=ApplicationStatus.REJECTED,
+        updated_at=closed_at,
+        history=history,
+    )
+    second = application(
+        id="second",
+        status=ApplicationStatus.REJECTED,
+        updated_at=closed_at,
+        history=history,
+    )
+
+    result = audit_applications((first, second), as_of=date(2026, 9, 6))
+
+    assert result.healthy is True
