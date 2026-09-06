@@ -10,6 +10,7 @@ The first release focuses on a safe application workflow:
 - schedule and review follow-ups;
 - build a prioritized daily action plan from follow-ups and stale records;
 - review count-only weekly progress against a submission goal;
+- audit semantic record integrity without changing or exposing applications;
 - keep an append-only activity history and private manual notes;
 - review one timeline or bounded recent activity with notes hidden by default;
 - produce readable or JSON summaries for personal automation;
@@ -45,6 +46,7 @@ applyflow --data ~/private/applications.json history APPLICATION_ID
 applyflow --data ~/private/applications.json activity --since 2026-09-01 --limit 25
 applyflow --data ~/private/applications.json plan --as-of 2026-09-03 --json
 applyflow --data ~/private/applications.json week --ending 2026-09-05 --json
+applyflow --data ~/private/applications.json audit --as-of 2026-09-06 --json
 applyflow --data ~/private/applications.json backup ~/private/backups/applyflow.json
 applyflow verify-backup ~/private/backups/applyflow.json
 ```
@@ -58,6 +60,9 @@ command builds a bounded, deduplicated daily list of overdue, upcoming, and
 stale-record reviews. The `pipeline` command summarizes stage counts and interview or offer conversion, while `stale` flags active records that have not changed recently. JSON reports are
 available with `--json` and omit source URLs and activity notes. The `history`
 and `activity` commands reveal notes only with an explicit `--include-notes`.
+The `audit` command checks lifecycle, history, timestamp, follow-up, and
+duplicate-opportunity consistency. It returns status 1 for findings and reports
+aggregate codes only.
 
 See the [usage guide](docs/usage.md) and
-[privacy and safety guide](docs/privacy-and-safety.md), [analytics guide](docs/analytics.md), and [activity guide](docs/activity.md), and [daily planning guide](docs/daily-plans.md), and [backup guide](docs/backups.md), and [weekly review guide](docs/weekly-reviews.md) for details.
+[privacy and safety guide](docs/privacy-and-safety.md), [analytics guide](docs/analytics.md), and [activity guide](docs/activity.md), and [daily planning guide](docs/daily-plans.md), and [backup guide](docs/backups.md), [weekly review guide](docs/weekly-reviews.md), and [integrity audit guide](docs/integrity-audits.md) for details.
